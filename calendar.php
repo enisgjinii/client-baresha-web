@@ -1,123 +1,3 @@
-<?php
-include 'connection.php';
-include 'header.php';
-include 'sidebar.php';
-
-$youtube_api_key = '';
-$youtube_channel_id = '';
-$error_message = '';
-$success_message = '';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['youtube_api_key'])) {
-    $_SESSION['youtube_api_key'] = $_POST['youtube_api_key'];
-    $youtube_api_key = $_SESSION['youtube_api_key'];
-    $success_message = "YouTube API Key saved successfully!";
-} elseif (isset($_SESSION['youtube_api_key'])) {
-    $youtube_api_key = $_SESSION['youtube_api_key'];
-}
-
-$user_id = $_SESSION['user_id'];
-if ($user_id) {
-    $stmt = $conn->prepare("SELECT youtube FROM klientet WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows > 0) {
-        $user_data = $result->fetch_assoc();
-        $youtube_channel_id = $user_data['youtube'];
-    } else {
-        $error_message = "User data not found.";
-    }
-    $stmt->close();
-} else {
-    $error_message = "User not logged in.";
-}
-
-$static_channel_id = 'UCV6ZBT0ZUfNbtZMbsy-L3CQ';
-$events = [];
-
-function fetchVideos($channel_id, $youtube_api_key)
-{
-    $max_results = 50;
-    $events = [];
-    $pageToken = '';
-    do {
-        $api_url = "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults={$max_results}&order=date&channelId={$channel_id}&type=video&key={$youtube_api_key}" . ($pageToken ? "&pageToken={$pageToken}" : "");
-        $api_response_json = @file_get_contents($api_url);
-        if ($api_response_json === false) return ['error' => "Failed to fetch data for Channel ID: " . htmlspecialchars($channel_id)];
-        $api_response = json_decode($api_response_json, true);
-        if ($api_response && isset($api_response['items'])) {
-            $video_ids_array = array_map(function ($item) {
-                return $item['id']['videoId'];
-            }, $api_response['items']);
-            $video_ids_string = implode(',', $video_ids_array);
-            $video_details_url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={$video_ids_string}&key={$youtube_api_key}";
-            $video_details_json = @file_get_contents($video_details_url);
-            if ($video_details_json === false) return ['error' => "Failed to fetch detailed video data for Channel ID: " . htmlspecialchars($channel_id)];
-            $video_details_response = json_decode($video_details_json, true);
-            $video_details_items = $video_details_response['items'];
-            $video_details_map = [];
-            foreach ($video_details_items as $video_detail_item) {
-                $video_details_map[$video_detail_item['id']] = $video_detail_item;
-            }
-            foreach ($api_response['items'] as $item) {
-                $video_id = $item['id']['videoId'];
-                $video_detail = $video_details_map[$video_id];
-                $video_title = $item['snippet']['title'];
-                $published_at_raw = $item['snippet']['publishedAt'];
-                $published_date = date('Y-m-d', strtotime($published_at_raw));
-                $video_thumbnail = $item['snippet']['thumbnails']['medium']['url'];
-                $video_description = isset($video_detail['snippet']) ? $video_detail['snippet']['description'] : '';
-                $view_count = isset($video_detail['statistics']['viewCount']) ? number_format($video_detail['statistics']['viewCount']) : 'N/A';
-                $like_count = isset($video_detail['statistics']['likeCount']) ? number_format($video_detail['statistics']['likeCount']) : 'N/A';
-                $comment_count = isset($video_detail['statistics']['commentCount']) ? number_format($video_detail['statistics']['commentCount']) : 'N/A';
-                $published_at_formatted = date('F j, Y, g:i a', strtotime($published_at_raw));
-                $events[] = [
-                    'title' => $video_title,
-                    'start' => $published_date,
-                    'allDay' => true,
-                    'url' => 'https://www.youtube.com/watch?v=' . $video_id,
-                    'extendedProps' => [
-                        'videoId' => $video_id,
-                        'thumbnail' => $video_thumbnail,
-                        'description' => $video_description,
-                        'viewCount' => $view_count,
-                        'likeCount' => $like_count,
-                        'commentCount' => $comment_count,
-                        'publishedAtFormatted' => $published_at_formatted
-                    ]
-                ];
-            }
-        } else {
-            $api_error_detail = isset($api_response['error']['message']) ? " API Error: " . $api_response['error']['message'] : '';
-            return ['error' => "No videos found or invalid API response for Channel ID: " . htmlspecialchars($channel_id) . $api_error_detail];
-        }
-        $pageToken = isset($api_response['nextPageToken']) ? $api_response['nextPageToken'] : '';
-    } while ($pageToken);
-    return $events;
-}
-
-if ($youtube_api_key) {
-    if ($youtube_channel_id) {
-        $result_dynamic = fetchVideos($youtube_channel_id, $youtube_api_key);
-        if (isset($result_dynamic['error'])) {
-            $error_message .= $result_dynamic['error'];
-        } else {
-            $events = array_merge($events, $result_dynamic);
-        }
-    } else {
-        $error_message .= "Please update your profile with your YouTube Channel ID.";
-    }
-    $result_static = fetchVideos($static_channel_id, $youtube_api_key);
-    if (isset($result_static['error'])) {
-        $error_message .= " " . $result_static['error'];
-    } else {
-        $events = array_merge($events, $result_static);
-    }
-} else {
-    $error_message .= "API key is required.";
-}
-?>
 <style>
     #calendar {
         margin: 20px;
@@ -303,6 +183,127 @@ if ($youtube_api_key) {
         font-size: 0.85rem;
     }
 </style>
+<?php
+include 'connection.php';
+include 'header.php';
+include 'sidebar.php';
+
+$youtube_api_key = '';
+$youtube_channel_id = '';
+$error_message = '';
+$success_message = '';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['youtube_api_key'])) {
+    $_SESSION['youtube_api_key'] = $_POST['youtube_api_key'];
+    $youtube_api_key = $_SESSION['youtube_api_key'];
+    $success_message = "YouTube API Key saved successfully!";
+} elseif (isset($_SESSION['youtube_api_key'])) {
+    $youtube_api_key = $_SESSION['youtube_api_key'];
+}
+
+$user_id = $_SESSION['user_id'];
+if ($user_id) {
+    $stmt = $conn->prepare("SELECT youtube FROM klientet WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $user_data = $result->fetch_assoc();
+        $youtube_channel_id = $user_data['youtube'];
+    } else {
+        $error_message = "User data not found.";
+    }
+    $stmt->close();
+} else {
+    $error_message = "User not logged in.";
+}
+
+$static_channel_id = 'UCV6ZBT0ZUfNbtZMbsy-L3CQ';
+$events = [];
+
+function fetchVideos($channel_id, $youtube_api_key)
+{
+    $max_results = 50;
+    $events = [];
+    $pageToken = '';
+    do {
+        $api_url = "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults={$max_results}&order=date&channelId={$channel_id}&type=video&key={$youtube_api_key}" . ($pageToken ? "&pageToken={$pageToken}" : "");
+        $api_response_json = @file_get_contents($api_url);
+        if ($api_response_json === false) return ['error' => "Failed to fetch data for Channel ID: " . htmlspecialchars($channel_id)];
+        $api_response = json_decode($api_response_json, true);
+        if ($api_response && isset($api_response['items'])) {
+            $video_ids_array = array_map(function ($item) {
+                return $item['id']['videoId'];
+            }, $api_response['items']);
+            $video_ids_string = implode(',', $video_ids_array);
+            $video_details_url = "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={$video_ids_string}&key={$youtube_api_key}";
+            $video_details_json = @file_get_contents($video_details_url);
+            if ($video_details_json === false) return ['error' => "Failed to fetch detailed video data for Channel ID: " . htmlspecialchars($channel_id)];
+            $video_details_response = json_decode($video_details_json, true);
+            $video_details_items = $video_details_response['items'];
+            $video_details_map = [];
+            foreach ($video_details_items as $video_detail_item) {
+                $video_details_map[$video_detail_item['id']] = $video_detail_item;
+            }
+            foreach ($api_response['items'] as $item) {
+                $video_id = $item['id']['videoId'];
+                $video_detail = $video_details_map[$video_id];
+                $video_title = $item['snippet']['title'];
+                $published_at_raw = $item['snippet']['publishedAt'];
+                $published_date = date('Y-m-d', strtotime($published_at_raw));
+                $video_thumbnail = $item['snippet']['thumbnails']['medium']['url'];
+                $video_description = isset($video_detail['snippet']) ? $video_detail['snippet']['description'] : '';
+                $view_count = isset($video_detail['statistics']['viewCount']) ? number_format($video_detail['statistics']['viewCount']) : 'N/A';
+                $like_count = isset($video_detail['statistics']['likeCount']) ? number_format($video_detail['statistics']['likeCount']) : 'N/A';
+                $comment_count = isset($video_detail['statistics']['commentCount']) ? number_format($video_detail['statistics']['commentCount']) : 'N/A';
+                $published_at_formatted = date('F j, Y, g:i a', strtotime($published_at_raw));
+                $events[] = [
+                    'title' => $video_title,
+                    'start' => $published_date,
+                    'allDay' => true,
+                    'url' => 'https://www.youtube.com/watch?v=' . $video_id,
+                    'extendedProps' => [
+                        'videoId' => $video_id,
+                        'thumbnail' => $video_thumbnail,
+                        'description' => $video_description,
+                        'viewCount' => $view_count,
+                        'likeCount' => $like_count,
+                        'commentCount' => $comment_count,
+                        'publishedAtFormatted' => $published_at_formatted
+                    ]
+                ];
+            }
+        } else {
+            $api_error_detail = isset($api_response['error']['message']) ? " API Error: " . $api_response['error']['message'] : '';
+            return ['error' => "No videos found or invalid API response for Channel ID: " . htmlspecialchars($channel_id) . $api_error_detail];
+        }
+        $pageToken = isset($api_response['nextPageToken']) ? $api_response['nextPageToken'] : '';
+    } while ($pageToken);
+    return $events;
+}
+
+if ($youtube_api_key) {
+    if ($youtube_channel_id) {
+        $result_dynamic = fetchVideos($youtube_channel_id, $youtube_api_key);
+        if (isset($result_dynamic['error'])) {
+            $error_message .= $result_dynamic['error'];
+        } else {
+            $events = array_merge($events, $result_dynamic);
+        }
+    } else {
+        $error_message .= "Please update your profile with your YouTube Channel ID.";
+    }
+    $result_static = fetchVideos($static_channel_id, $youtube_api_key);
+    if (isset($result_static['error'])) {
+        $error_message .= " " . $result_static['error'];
+    } else {
+        $events = array_merge($events, $result_static);
+    }
+} else {
+    $error_message .= "API key is required.";
+}
+?>
+
 <div class="col-md-10 main-content">
     <div class="fade-in">
         <h4 class="fw-bold text-primary">Calendar</h4>

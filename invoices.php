@@ -2,8 +2,6 @@
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
-
-// Define an Invoice class to represent individual invoices
 class Invoice
 {
   public $invoice_number;
@@ -20,8 +18,6 @@ class Invoice
     $this->status         = $data['status'];
   }
 }
-
-// Define an InvoiceRepository class to handle invoice retrieval
 class InvoiceRepository
 {
   private $conn;
@@ -49,15 +45,13 @@ class InvoiceRepository
   }
 }
 
-// Retrieve invoices for the current user
 $user_id = $_SESSION['user_id'];
 $invoiceRepo = new InvoiceRepository($conn);
 $invoices = $invoiceRepo->getInvoicesByUserId($user_id);
 
-// Prepare data for ApexChart - Invoice status distribution
 $invoiceStatusCounts = [];
 foreach ($invoices as $invoice) {
-  $status = ucfirst(strtolower($invoice->status)); // Normalize status case
+  $status = ucfirst(strtolower($invoice->status)); 
   if (isset($invoiceStatusCounts[$status])) {
     $invoiceStatusCounts[$status]++;
   } else {
@@ -75,63 +69,46 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
   #invoicesTable th,
   #invoicesTable td {
     text-align: left !important;
-    /* Keep text left-aligned */
     vertical-align: middle;
-    /* Vertically center text in cells */
     padding: 0.6rem;
-    /* Add some padding for better spacing */
   }
 
   #invoicesTable th {
     font-size: 1rem;
-    /* Slightly larger font for header */
     font-weight: bold;
     color: #333;
-    /* Darker header text */
     border-bottom: 2px solid #eee;
-    /* Separator under headers */
   }
 
   #invoicesTable td {
     font-size: 0.9rem;
-    /* Slightly smaller font for data */
   }
 
-  /* Style for informative spans */
   .invoice-number-span {
     font-weight: 500;
-    /* Make invoice number slightly bolder */
     color: #007bff;
-    /* Use a subtle primary color for invoice numbers */
   }
 
   .date-span {
     font-style: italic;
-    /* Italicize dates for visual distinction */
     color: #6c757d;
-    /* Muted color for dates */
   }
 
   .total-amount-span,
   .paid-amount-span {
     font-weight: bold;
-    /* Make amounts bold */
   }
 
   .total-amount-span::before {
     content: '+';
-    /* Add a plus sign before total amount to indicate it's an addition */
     margin-right: 2px;
     color: #28a745;
-    /* Green color for positive connotation */
   }
 
   .paid-amount-span::before {
     content: '-';
-    /* Add a minus sign before paid amount to indicate it's a subtraction */
     margin-right: 2px;
     color: #17a2b8;
-    /* Info color for paid amount */
   }
 
 
@@ -141,51 +118,38 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
     border-radius: 0.2rem;
     font-weight: 600;
     text-align: center;
-    /* Ensure text is centered in the span */
     min-width: 70px;
-    /* Ensure a minimum width for status spans */
   }
 
   .status-paid {
     background-color: #d4edda;
-    /* Light green for paid status */
     color: #155724;
-    /* Dark green text for paid status */
   }
 
   .status-pending {
     background-color: #fff3cd;
-    /* Light yellow for pending status */
     color: #856404;
-    /* Dark yellow text for pending status */
   }
 
   .status-due {
     background-color: #f8d7da;
-    /* Light red for due/overdue status */
     color: #721c24;
-    /* Dark red text for due/overdue status */
   }
 
-  /* Ensure table fills its container nicely */
   .table-responsive {
     overflow-x: auto;
-    /* Enable horizontal scroll if table is too wide */
   }
 
   .card-body {
     padding: 1.25rem;
-    /* Increase card body padding for more space */
   }
 
   .card-header {
     padding: 0.75rem 1.25rem;
-    /* Adjust card header padding */
   }
 
   .main-content {
     padding: 1.5rem;
-    /* More padding around main content */
   }
 
   .fade-in {
@@ -219,11 +183,10 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
     }
   }
 
-  /* ApexChart container style */
   #invoiceChart {
     width: 100%;
     margin-top: 20px;
-    /* Add some space between table and chart */
+   
   }
 </style>
 
@@ -335,15 +298,13 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
         });
       },
     });
-
-    // ApexChart Configuration - Pie Chart for Invoice Statuses
     var options = {
       chart: {
         type: 'pie',
         height: 350,
       },
-      series: <?php echo json_encode($invoiceStatusSeries); ?>, // Use PHP array for series data
-      labels: <?php echo json_encode($invoiceStatusLabels); ?>, // Use PHP array for labels
+      series: <?php echo json_encode($invoiceStatusSeries); ?>,
+      labels: <?php echo json_encode($invoiceStatusLabels); ?>,
       legend: {
         position: 'bottom'
       },

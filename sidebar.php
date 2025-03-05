@@ -6,6 +6,10 @@ $navItems = [
     ['title' => 'Invoices', 'icon' => 'bi-receipt', 'url' => 'invoices.php'],
     ['title' => 'Reports', 'icon' => 'bi-bar-chart', 'url' => 'reports.php'],
     ['title' => 'Help Center', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
+    ['title' => 'General Contract', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
+    ['title' => 'Song Contract', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
+    // ['title' => 'Settings', 'icon' => 'bi-gear', 'url' => 'settings.php'],
+    // Logout item will be added separately at the end
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentUserName = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : "User";
@@ -49,9 +53,16 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
             </div>
         </a>
     </div>
+    <div class="p-2 logout-panel">
+        <a href="logout.php" class="logout-link nav-link">
+            <i class="bi bi-box-arrow-right me-2"></i>
+            <span class="sidebar-text">Logout</span>
+        </a>
+    </div>
 </div>
 
 <style>
+    /* Existing styles remain the same */
     .sidebar {
         min-height: 100vh;
         background-color: #f8f9fa;
@@ -181,12 +192,15 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         background-color: #f8f9fa;
         border-top: 1px solid #eee;
         margin-top: auto;
+        /* Push user panel to the bottom, but logout below it */
+        border-bottom: 1px solid #eee;
+        /* Added border to separate from logout */
     }
 
     .user-link {
         display: flex;
         align-items: center;
-        padding: 0.5rem 0.5rem;
+        padding: 0.5rem 0.75rem;
         color: #495057;
         text-decoration: none !important;
         transition: background-color 0.15s ease;
@@ -210,6 +224,38 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         width: 0;
         display: none;
     }
+
+    .logout-panel {
+        background-color: #f8f9fa;
+        /* Match sidebar background */
+        margin-top: 0;
+        /* Ensure it's directly after user panel */
+    }
+
+    .logout-link {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        color: #dc3545;
+        /* Example: Red color for logout */
+        text-decoration: none !important;
+        transition: background-color 0.15s ease;
+        border-radius: 0.25rem;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .logout-link:hover {
+        background-color: #f8d7da;
+        /* Light red on hover */
+        color: #dc3545;
+    }
+
+    .logout-link i {
+        color: #dc3545;
+        /* Red icon for logout */
+    }
+
 
     /* Add media query for mobile devices */
     @media (max-width: 767.98px) {
@@ -237,9 +283,11 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         function initTooltips() {
             if (sidebar.classList.contains('sidebar-collapsed')) {
                 document.querySelectorAll('.nav-link').forEach(link => {
-                    link.setAttribute('data-bs-toggle', 'tooltip');
-                    link.setAttribute('title', link.querySelector('.sidebar-text').textContent);
-                    new bootstrap.Tooltip(link);
+                    if (!link.classList.contains('logout-link')) { // Exclude logout link from tooltips
+                        link.setAttribute('data-bs-toggle', 'tooltip');
+                        link.setAttribute('title', link.querySelector('.sidebar-text').textContent);
+                        new bootstrap.Tooltip(link);
+                    }
                 });
             }
         }
@@ -247,12 +295,14 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         // Destroy all tooltips
         function destroyTooltips() {
             document.querySelectorAll('.nav-link').forEach(link => {
-                const tooltip = bootstrap.Tooltip.getInstance(link);
-                if (tooltip) {
-                    tooltip.dispose();
+                if (!link.classList.contains('logout-link')) { // Exclude logout link from tooltip destruction
+                    const tooltip = bootstrap.Tooltip.getInstance(link);
+                    if (tooltip) {
+                        tooltip.dispose();
+                    }
+                    link.removeAttribute('data-bs-toggle');
+                    link.removeAttribute('title');
                 }
-                link.removeAttribute('data-bs-toggle');
-                link.removeAttribute('title');
             });
         }
 
@@ -283,12 +333,14 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
 
         // Make sure tooltips don't remain when hovering out
         document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('mouseleave', function() {
-                const tooltip = bootstrap.Tooltip.getInstance(this);
-                if (tooltip) {
-                    tooltip.hide();
-                }
-            });
+            if (!link.classList.contains('logout-link')) { // Exclude logout link from tooltip hover out
+                link.addEventListener('mouseleave', function() {
+                    const tooltip = bootstrap.Tooltip.getInstance(this);
+                    if (tooltip) {
+                        tooltip.hide();
+                    }
+                });
+            }
         });
 
         // Handle window resize - collapse sidebar on small screens
