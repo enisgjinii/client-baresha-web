@@ -8,8 +8,7 @@ $navItems = [
     ['title' => 'Help Center', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
     ['title' => 'General Contract', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
     ['title' => 'Song Contract', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
-    // ['title' => 'Settings', 'icon' => 'bi-gear', 'url' => 'settings.php'],
-    // Logout item will be added separately at the end
+    
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentUserName = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : "User";

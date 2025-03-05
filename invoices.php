@@ -189,7 +189,6 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
    
   }
 </style>
-
 <div class="col-md-10 main-content">
   <div class="d-flex justify-content-between align-items-center mb-3 fade-in">
     <div>
@@ -229,15 +228,11 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
           <p class="text-muted">Nuk keni krijuar asnjë faturë ende.</p>
         </div>
       <?php endif; ?>
-
       <div id="invoiceChart"></div>
-
     </div>
   </div>
 </div>
-
 <?php include 'footer.php'; ?>
-
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -245,8 +240,6 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
-
-
 <script>
   $(document).ready(function() {
     $('#invoicesTable').DataTable({
