@@ -2,32 +2,37 @@
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
-$user_id = $_SESSION['user_id'];
-$sql = "SELECT kg.*, k.youtube AS klient_youtube
-        FROM kontrata_gjenerale kg
-        LEFT JOIN klientet k ON kg.youtube_id = k.youtube
-        WHERE k.id = ?";
+
+$user_id = $_SESSION['user_id']; // Get user ID from session
+
+// Modified SQL query to JOIN tables and filter by user ID - Assuming 'reg_user_id' in klientet
+$sql = "SELECT knt.*, k.emri AS klient_emri, k.emriart AS klient_emriart, k.youtube AS klient_youtube
+        FROM kontrata knt
+        LEFT JOIN klientet k ON knt.klienti = k.emri -- Assuming 'kontrata.klienti' links to 'klientet.emri'
+        WHERE k.id = ?"; // Filter by user ID - adjust if needed
+
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
+
 ?>
 <style>
-    #contractsTable th,
-    #contractsTable td {
+    #songContractsTable th,
+    #songContractsTable td {
         text-align: left !important;
         vertical-align: middle;
         padding: 0.6rem;
     }
 
-    #contractsTable th {
+    #songContractsTable th {
         font-size: 1rem;
         font-weight: bold;
         color: #333;
         border-bottom: 2px solid #eee;
     }
 
-    #contractsTable td {
+    #songContractsTable td {
         font-size: 0.9rem;
     }
 
@@ -90,46 +95,35 @@ $result = $stmt->get_result();
 <div class="col-md-10 main-content">
     <div class="d-flex justify-content-between align-items-center mb-3 fade-in">
         <div>
-            <h3 class="fw-bold text-primary">Kontratat e Përgjithshme</h3>
-            <p class="text-muted mb-0">Menaxho dhe shqyrto kontratat e përgjithshme</p>
+            <h3 class="fw-bold text-primary">Kontratat e Këngëve</h3>
+            <p class="text-muted mb-0">Menaxho dhe shqyrto kontratat e këngëve</p>
         </div>
     </div>
     <div class="card shadow-sm border-0 rounded-lg slide-up">
         <div class="card-header bg-light py-2">
-            <h5 class="mb-0">Të Gjitha Kontratat e Përgjithshme për Përdoruesin</h5>
+            <h5 class="mb-0">Të Gjitha Kontratat e Këngëve për Përdoruesin</h5>
         </div>
         <div class="card-body p-3">
             <?php if ($result->num_rows > 0): ?>
                 <div class="table-responsive">
-                    <table class="table table-hover animate-table" id="contractsTable">
+                    <table class="table table-hover animate-table" id="songContractsTable">
                         <thead class="table-light">
                             <tr>
                                 <th><span class="header-span">ID</span></th>
                                 <th><span class="header-span">Emri</span></th>
                                 <th><span class="header-span">Mbiemri</span></th>
-                                <th><span class="header-span">ID Kontrates</span></th>
-                                <th><span class="header-span">Data e Krijimit</span></th>
-                                <th><span class="header-span">Youtube Klienti</span></th>
-                                <th><span class="header-span">Artisti</span></th>
-                                <th><span class="header-span">TVSH</span></th>
-                                <th><span class="header-span">Pronari i Llogarisë Rrjedhëse</span></th>
-                                <th><span class="header-span">Numri i Llogarisë Rrjedhëse</span></th>
-                                <th><span class="header-span">Kodi Swift</span></th>
-                                <th><span class="header-span">IBAN</span></th>
-                                <th><span class="header-span">Emri i Bankës</span></th>
-                                <th><span class="header-span">Adresa e Bankës</span></th>
                                 <th><span class="header-span">Numri i Telefonit</span></th>
                                 <th><span class="header-span">Numri Personal</span></th>
-                                <th><span class="header-span">Email</span></th>
-                                <th><span class="header-span">Nënshkrimi</span></th>
+                                <th><span class="header-span">Vepra</span></th>
+                                <th><span class="header-span">Data</span></th>
                                 <th><span class="header-span">Shënim</span></th>
-                                <th><span class="header-span">Shteti</span></th>
-                                <th><span class="header-span">Kohëzgjatja</span></th>
-                                <th><span class="header-span">Lloji i Dokumentit</span></th>
-                                <th><span class="header-span">Shtegu i Dokumentit</span></th>
-                                <th><span class="header-span">ID e Regjistruesit</span></th>
-                                <th><span class="header-span">Emri i Regjistruesit</span></th>
-                                <th><span class="header-span">Data e Nënshkrimit</span></th>
+                                <th><span class="header-span">Nënshkrimi</span></th>
+                                <th><span class="header-span">Kontrata PDF</span></th>
+                                <th><span class="header-span">Përqindja</span></th>
+                                <th><span class="header-span">Klienti Emri</span></th>
+                                <th><span class="header-span">Klienti Emri Artistik</span></th>
+                                <th><span class="header-span">Klienti Youtube</span></th>
+                                <th><span class="header-span">PDF File</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,47 +134,34 @@ $result = $stmt->get_result();
                                     echo "<td><span class='contract-id-span'>" . htmlspecialchars($row['id']) . "</span></td>";
                                     echo "<td><span>" . htmlspecialchars($row['emri']) . "</span></td>";
                                     echo "<td><span>" . htmlspecialchars($row['mbiemri']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['id_kontrates']) . "</span></td>";
-                                    echo "<td><span class='date-span'>" . htmlspecialchars(date('d M Y', strtotime($row['data_e_krijimit']))) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['klient_youtube']) . "</span></td>";
-                                    echo "<td>";
-                                    $artist_data_json = $row['artisti'];
-                                    $artist_data = json_decode($artist_data_json, true);
-                                    if (is_array($artist_data) && isset($artist_data['emriart'])) {
-                                        echo htmlspecialchars($artist_data['emriart']);
-                                    } else {
-                                        echo "Informacioni i Artistit";
-                                    }
-                                    echo "</td>";
-                                    echo "<td><span>" . htmlspecialchars($row['tvsh']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['pronari_xhirollogarise']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['numri_xhirollogarise']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['kodi_swift']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['iban']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['emri_bankes']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['adresa_bankes']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['numri_tel']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['numri_i_telefonit']) . "</span></td>";
                                     echo "<td><span>" . htmlspecialchars($row['numri_personal']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['email']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['vepra']) . "</span></td>";
+                                    echo "<td><span class='date-span'>" . htmlspecialchars($row['data']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['shenim']) . "</span></td>";
                                     echo "<td>";
                                     if ($row['nenshkrimi']) {
-                                        echo "<a href='view_signature.php?id=" . htmlspecialchars($row['id']) . "' target='_blank'>Shiko Nënshkrimin</a>";
+                                        echo "<a href='view_signature_song.php?id=" . htmlspecialchars($row['id']) . "' target='_blank'>Shiko Nënshkrimin</a>";
                                     } else {
                                         echo "Pa Nënshkrim";
                                     }
                                     echo "</td>";
-                                    echo "<td><span>" . htmlspecialchars($row['shenim']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['shteti']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['kohezgjatja']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['lloji_dokumentit']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['document_path']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['id_regjistruesit']) . "</span></td>";
-                                    echo "<td><span>" . htmlspecialchars($row['emri_regjistruesit']) . "</span></td>";
-                                    echo "<td><span class='date-span'>" . htmlspecialchars($row['data_e_nenshkrimit']) . "</span></td>";
+                                    echo "<td>";
+                                    if ($row['kontrata_PDF']) {
+                                        echo "<a href='view_pdf_song.php?id=" . htmlspecialchars($row['id']) . "' target='_blank'>Shiko PDF</a>";
+                                    } else {
+                                        echo "Pa PDF";
+                                    }
+                                    echo "</td>";
+                                    echo "<td><span>" . htmlspecialchars($row['perqindja']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['klient_emri']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['klient_emriart']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['klient_youtube']) . "</span></td>";
+                                    echo "<td><span>" . htmlspecialchars($row['pdf_file']) . "</span></td>";
                                     echo "</tr>";
                                 }
                             } else {
-                                echo "<tr><td colspan='26'>Nuk u Gjetën Kontrata të Përgjithshme për Përdoruesin</td></tr>";
+                                echo "<tr><td colspan='15'>Nuk u Gjetën Kontrata të Këngëve për Përdoruesin</td></tr>";
                             }
                             ?>
                         </tbody>
@@ -188,8 +169,8 @@ $result = $stmt->get_result();
                 </div>
             <?php else: ?>
                 <div class="text-center py-4 empty-state">
-                    <h5>Nuk u Gjetën Kontrata të Përgjithshme për Përdoruesin</h5>
-                    <p class="text-muted">Kontrata të përgjithshme nuk janë shtuar ende për këtë përdorues.</p>
+                    <h5>Nuk u Gjetën Kontrata të Këngëve për Përdoruesin</h5>
+                    <p class="text-muted">Kontrata të këngëve nuk janë shtuar ende për këtë përdorues.</p>
                 </div>
             <?php endif; ?>
         </div>
@@ -207,7 +188,7 @@ $result = $stmt->get_result();
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#contractsTable').DataTable({
+        $('#songContractsTable').DataTable({
             responsive: true,
             dom: `
         <'container-fluid'

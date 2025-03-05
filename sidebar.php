@@ -8,6 +8,7 @@ $navItems = [
     ['title' => 'Help Center', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
     ['title' => 'General Contract', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
     ['title' => 'Song Contract', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
+    ['title' => 'Link YouTube', 'icon' => 'bi-youtube', 'url' => 'link-youtube.php'],
     
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
