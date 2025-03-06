@@ -2,6 +2,7 @@
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
+
 class Invoice
 {
   public $invoice_number;
@@ -18,6 +19,7 @@ class Invoice
     $this->status         = $data['status'];
   }
 }
+
 class InvoiceRepository
 {
   private $conn;
@@ -51,7 +53,7 @@ $invoices = $invoiceRepo->getInvoicesByUserId($user_id);
 
 $invoiceStatusCounts = [];
 foreach ($invoices as $invoice) {
-  $status = ucfirst(strtolower($invoice->status)); 
+  $status = ucfirst(strtolower($invoice->status));
   if (isset($invoiceStatusCounts[$status])) {
     $invoiceStatusCounts[$status]++;
   } else {
@@ -61,8 +63,6 @@ foreach ($invoices as $invoice) {
 
 $invoiceStatusLabels = array_keys($invoiceStatusCounts);
 $invoiceStatusSeries = array_values($invoiceStatusCounts);
-
-
 ?>
 
 <style>
@@ -87,6 +87,7 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
   .invoice-number-span {
     font-weight: 500;
     color: #007bff;
+    cursor: pointer;
   }
 
   .date-span {
@@ -110,7 +111,6 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
     margin-right: 2px;
     color: #17a2b8;
   }
-
 
   .status-span {
     display: inline-block;
@@ -160,7 +160,6 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
     animation: slideUp ease 0.5s;
   }
 
-
   @keyframes fadeIn {
     0% {
       opacity: 0;
@@ -186,9 +185,9 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
   #invoiceChart {
     width: 100%;
     margin-top: 20px;
-   
   }
 </style>
+
 <div class="col-md-10 main-content">
   <div class="d-flex justify-content-between align-items-center mb-3 fade-in">
     <div>
@@ -213,7 +212,8 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
             </thead>
             <tbody>
               <?php foreach ($invoices as $invoice): ?>
-                <tr class="table-row-hover">
+                <!-- Add a data attribute with the invoice number -->
+                <tr class="table-row-hover" data-invoice="<?php echo htmlspecialchars($invoice->invoice_number); ?>">
                   <td><span class="invoice-number-span"><?php echo htmlspecialchars($invoice->invoice_number); ?></span></td>
                   <td><span class="date-span"><?php echo htmlspecialchars(date('d M Y', strtotime($invoice->created_date))); ?></span></td>
                   <td><span class="paid-amount-span"><?php echo htmlspecialchars(number_format($invoice->paid_amount, 2)); ?></span></td>
@@ -232,7 +232,26 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
     </div>
   </div>
 </div>
+
+<!-- Invoice Modal -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" aria-labelledby="invoiceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <!-- Optionally include a modal header -->
+      <div class="modal-header">
+        <h5 class="modal-title" id="invoiceModalLabel">Fatura</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- The invoice details will be loaded here via AJAX -->
+        <div class="text-center">Loading invoice...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php include 'footer.php'; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -291,6 +310,7 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
         });
       },
     });
+
     var options = {
       chart: {
         type: 'pie',
@@ -316,5 +336,30 @@ $invoiceStatusSeries = array_values($invoiceStatusCounts);
 
     var chart = new ApexCharts(document.querySelector("#invoiceChart"), options);
     chart.render();
+
+    // Event listener for clicking on an invoice row
+    $('#invoicesTable tbody').on('click', 'tr', function() {
+      var invoiceNumber = $(this).data('invoice');
+      if (invoiceNumber) {
+        // Show loading text
+        $("#invoiceModal .modal-body").html('<div class="text-center">Loading invoice...</div>');
+        // Load invoice details via AJAX from invoice-view.php
+        $.ajax({
+          url: "invoice-view.php",
+          type: "GET",
+          data: {
+            id: invoiceNumber
+          },
+          success: function(response) {
+            $("#invoiceModal .modal-body").html(response);
+            $("#invoiceModal").modal("show");
+          },
+          error: function() {
+            $("#invoiceModal .modal-body").html('<div class="text-center text-danger">Error loading invoice details.</div>');
+            $("#invoiceModal").modal("show");
+          }
+        });
+      }
+    });
   });
 </script>
