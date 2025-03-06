@@ -1,8 +1,8 @@
 <?php
+
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
-$user_id = $_SESSION['user_id'];
 $sql = "SELECT kg.*, k.youtube AS klient_youtube
         FROM kontrata_gjenerale kg
         LEFT JOIN klientet k ON kg.youtube_id = k.youtube

@@ -3,13 +3,14 @@ include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
 
-$youtube_client_id = '889125415131-qfi8c11iibraqj82aal4fc8q4oic2m5u.apps.googleusercontent.com'; // Replace with your YouTube API Client ID
-$youtube_client_secret = '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'; // Replace with your YouTube API Client Secret
-$redirect_uri = 'http://localhost/client-baresha-web/link-youtube.php'; // Replace with your redirect URI
+$youtube_client_id = '889125415131-qfi8c11iibraqj82aal4fc8q4oic2m5u.apps.googleusercontent.com';
+$youtube_client_secret = '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';
+$redirect_uri = 'http://localhost/client-baresha-web/link-youtube.php';
 
 $authorization_code = $_GET['code'] ?? '';
-$access_token = $_SESSION['youtube_access_token'] ?? ''; // Get from session
-$refresh_token = $_SESSION['youtube_refresh_token'] ?? ''; // Get from session
+$access_token = $_SESSION['youtube_access_token'] ?? '';
+$refresh_token = $_SESSION['youtube_refresh_token'] ?? '';
+
 $channel_name = '';
 $channel_thumbnail = '';
 $view_count = 'N/A';
@@ -17,7 +18,9 @@ $estimated_revenue_total = 'N/A';
 $revenue_data_daily = [];
 $youtube_error_message = '';
 
-// Function to safely fetch data from YouTube API (same as before)
+$start_date = !empty($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
+$end_date = !empty($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
+
 function fetchYoutubeApiData($api_url, $access_token)
 {
     $ch = curl_init($api_url);
@@ -30,14 +33,8 @@ function fetchYoutubeApiData($api_url, $access_token)
     $curl_error = curl_error($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
-    if ($curl_error) {
-        return ['error' => 'cURL error: ' . $curl_error];
-    }
-    if ($http_code != 200) {
-        return ['error' => 'HTTP error: ' . $http_code . ' - ' . $response_json];
-    }
-
+    if ($curl_error) return ['error' => 'cURL error: ' . $curl_error];
+    if ($http_code != 200) return ['error' => 'HTTP error: ' . $http_code . ' - ' . $response_json];
     return json_decode($response_json, true);
 }
 
@@ -50,7 +47,6 @@ if ($authorization_code) {
         'redirect_uri' => $redirect_uri,
         'grant_type' => 'authorization_code'
     ];
-
     $ch = curl_init($token_url);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($token_params));
@@ -59,69 +55,28 @@ if ($authorization_code) {
     $curl_error = curl_error($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
     if ($curl_error) {
         $youtube_error_message = 'Token exchange cURL error: ' . $curl_error;
     } elseif ($http_code != 200) {
         $youtube_error_message = 'Token exchange HTTP error: ' . $http_code . ' - ' . $token_response_json;
     }
-
-
     if (empty($youtube_error_message)) {
         $token_response = json_decode($token_response_json, true);
-        if (isset($token_response['access_token'])) {
+        if (!empty($token_response['access_token'])) {
             $access_token = $token_response['access_token'];
             $refresh_token = $token_response['refresh_token'] ?? '';
-
-            // Store tokens in session - Now using server-side sessions!
             $_SESSION['youtube_access_token'] = $access_token;
             $_SESSION['youtube_refresh_token'] = $refresh_token;
-            echo "<script>console.log('Access and Refresh tokens saved to PHP session (Server-side storage)')</script>";
-
-
-            // Fetch Channel Information
             $channel_info_url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true';
             $channel_data = fetchYoutubeApiData($channel_info_url, $access_token);
-            if (isset($channel_data['error'])) {
-                $youtube_error_message .= 'Channel info error: ' . $channel_data['error'];
-            } elseif (isset($channel_data['items'][0])) {
+            if (!empty($channel_data['error'])) {
+                $youtube_error_message .= ' Channel info error: ' . $channel_data['error'];
+            } elseif (!empty($channel_data['items'][0])) {
                 $channel_name = $channel_data['items'][0]['snippet']['title'];
                 $channel_thumbnail = $channel_data['items'][0]['snippet']['thumbnails']['default']['url'];
                 $view_count = number_format($channel_data['items'][0]['statistics']['viewCount']);
             } else {
                 $channel_name = 'Error fetching channel name';
-            }
-
-            // Fetch Estimated Revenue Data
-            $analytics_url = 'https://youtubeanalytics.googleapis.com/v2/reports';
-            $today = date('Y-m-d');
-            $thirty_days_ago = date('Y-m-d', strtotime('-30 days'));
-
-            $analytics_params = [
-                'ids' => 'channel==MINE',
-                'startDate' => $thirty_days_ago,
-                'endDate' => $today,
-                'metrics' => 'estimatedRevenue',
-                'dimensions' => 'date',
-                'sort' => 'date'
-            ];
-
-            $analytics_url .= '?' . http_build_query($analytics_params);
-            $analytics_data = fetchYoutubeApiData($analytics_url, $access_token);
-
-            if (isset($analytics_data['error'])) {
-                $youtube_error_message .= 'Revenue data error: ' . $analytics_data['error'];
-            } elseif (isset($analytics_data['rows'])) {
-                $revenue_sum = 0;
-                foreach ($analytics_data['rows'] as $row) {
-                    $date = $row[0];
-                    $revenue = $row[1];
-                    $revenue_data_daily[] = ['date' => $date, 'revenue' => $revenue];
-                    $revenue_sum += $revenue;
-                }
-                $estimated_revenue_total = number_format($revenue_sum, 2);
-            } else {
-                $estimated_revenue_total = 'No revenue data available';
             }
         } else {
             $youtube_error_message = 'Failed to retrieve access token: ' . $token_response_json;
@@ -129,507 +84,602 @@ if ($authorization_code) {
     }
 }
 
+if ($access_token) {
+    $analytics_url = 'https://youtubeanalytics.googleapis.com/v2/reports';
+    $params_for_chart = [
+        'ids' => 'channel==MINE',
+        'startDate' => $start_date,
+        'endDate' => $end_date,
+        'metrics' => 'estimatedRevenue',
+        'dimensions' => 'day',
+        'sort' => 'day',
+        'currency' => 'EUR'
+    ];
+    $chart_query = $analytics_url . '?' . http_build_query($params_for_chart);
+    $analytics_data = fetchYoutubeApiData($chart_query, $access_token);
+    if (!empty($analytics_data['error'])) {
+        $youtube_error_message .= ' Revenue data error: ' . $analytics_data['error'];
+    } elseif (!empty($analytics_data['rows'])) {
+        $revenue_sum = 0;
+        foreach ($analytics_data['rows'] as $row) {
+            $date = $row[0];
+            $revenue = $row[1];
+            $revenue_data_daily[] = ['date' => $date, 'revenue' => $revenue];
+            $revenue_sum += $revenue;
+        }
+        $estimated_revenue_total = number_format($revenue_sum, 2);
+    } else {
+        $estimated_revenue_total = 'No revenue data available';
+    }
+}
 
 $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
     'client_id' => $youtube_client_id,
     'redirect_uri' => $redirect_uri,
-    'scope' => 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.channel-memberships.creator https://www.googleapis.com/auth/yt-analytics.readonly',
+    'scope' => 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.channel-memberships.creator https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly',
     'response_type' => 'code',
     'access_type' => 'offline',
-    'prompt' => 'consent',
+    'prompt' => 'consent'
 ]);
-
 ?>
-<style>
-    /* --- General Layout and Card Styles --- */
-    .link-youtube-card {
-        background-color: #fff;
-        border-radius: 10px;
-        /* Slightly less rounded */
-        box-shadow: 0 8px 20px rgba(70, 70, 70, 0.08);
-        /* Softer shadow, darker color */
-        margin-bottom: 2.5rem;
-        /* Increased bottom margin for spacing */
-        overflow: hidden;
-        border: 1px solid #e0e0e0;
-        /* Lighter border color */
-    }
+<!DOCTYPE html>
+<html lang="en">
 
-    .link-youtube-card:hover {
-        box-shadow: 0 12px 28px rgba(70, 70, 70, 0.12);
-        /* More pronounced hover shadow */
-        transform: translateY(-3px);
-        /* Slightly more translateY on hover */
-        transition: all 0.35s ease-in-out;
-        /* Smoother transition with ease-in-out */
-    }
-
-    .link-youtube-card-header {
-        padding: 1.75rem 2rem;
-        background-color: #f9f9f9;
-        /* Slightly lighter header background */
-        border-bottom: 1px solid #e0e0e0;
-        /* Lighter header border */
-    }
-
-    .link-youtube-card-title {
-        font-size: 1.6rem;
-        /* Slightly larger title font */
-        font-weight: 600;
-        /* Less bold, slightly lighter weight */
-        color: #333;
-        /* Darker text color */
-        margin-bottom: 0;
-        /* Remove default bottom margin for cleaner layout */
-    }
-
-    .link-youtube-card-body {
-        padding: 2.5rem;
-        /* Increased padding in body */
-        text-align: center;
-    }
-
-    /* --- YouTube Connect Button --- */
-    .youtube-connect-btn {
-        background-color: #e31b23;
-        /* YouTube Red - slightly adjusted */
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        /* Slightly more rounded button */
-        padding: 1.1rem 2.2rem;
-        /* Slightly adjusted padding */
-        font-size: 1.15rem;
-        /* Slightly larger font size */
-        font-weight: 500;
-        /* Lighter font weight */
-        cursor: pointer;
-        transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out;
-        /* Transition for transform */
-        margin-bottom: 1.2rem;
-        /* Adjusted margin */
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-        /* Button shadow */
-    }
-
-    .youtube-connect-btn:hover {
-        background-color: #c4171d;
-        /* Darker red on hover */
-        transform: scale(1.03);
-        /* Scale up slightly on hover */
-        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
-        /* Increased shadow on hover */
-    }
-
-    .youtube-connect-btn:active {
-        transform: scale(1.0);
-        /* Reset scale when active (click) */
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-        /* Reset shadow when active */
-    }
-
-    .youtube-icon {
-        width: 25px;
-        /* Slightly larger icon */
-        height: 25px;
-        margin-right: 12px;
-        /* Adjusted icon margin */
-        filter: brightness(0) invert(1);
-        /* Ensure icon is white */
-    }
-
-    /* --- Channel Info Section --- */
-    .channel-info {
-        margin-top: 2.5rem;
-        /* Increased margin top */
-        padding: 2rem;
-        border: 1px solid #e0e0e0;
-        /* Lighter border */
-        border-radius: 10px;
-        /* Rounded corners */
-        background-color: #f9f9f9;
-        /* Lighter background */
-        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.03);
-        /* Subtle inner shadow */
-    }
-
-    .channel-thumbnail {
-        width: 120px;
-        /* Larger thumbnail */
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-bottom: 1.2rem;
-        /* Adjusted margin */
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        /* Thumbnail shadow */
-        border: 3px solid #fff;
-        /* White border around thumbnail */
-    }
-
-    .channel-name {
-        font-size: 1.5rem;
-        /* Slightly larger channel name */
-        font-weight: 600;
-        /* Slightly lighter weight */
-        color: #3a4750;
-        margin-bottom: 0.7rem;
-        /* Adjusted margin */
-    }
-
-    .channel-stats {
-        font-size: 1.05rem;
-        /* Slightly larger stats font */
-        color: #777;
-        /* Muted stats color */
-        margin-bottom: 0.5rem;
-        /* Adjusted margin */
-    }
-
-    /* --- Revenue Stats Section --- */
-    .revenue-stats {
-        margin-top: 2rem;
-        padding: 2rem;
-        border: 1px solid #e0e0e0;
-        /* Lighter border */
-        border-radius: 10px;
-        /* Rounded corners */
-        background-color: #f9f9f9;
-        /* Lighter background */
-        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.03);
-        /* Subtle inner shadow */
-    }
-
-    .revenue-stat-title {
-        font-size: 1.4rem;
-        /* Adjusted title font size */
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 1.5rem;
-        /* Increased margin */
-        text-align: left;
-        /* Align revenue stats title to left */
-    }
-
-    .revenue-stat-item {
-        margin-bottom: 1.2rem;
-        /* Adjusted margin */
-    }
-
-    .revenue-stat-label {
-        font-weight: 500;
-        /* Lighter label weight */
-        color: #555;
-        /* Darker label color */
-        display: block;
-        margin-bottom: 0.3rem;
-        /* Adjusted margin */
-        font-size: 1.05rem;
-        /* Slightly larger label font */
-        text-align: left;
-        /* Align label to left */
-    }
-
-    .revenue-stat-value {
-        font-size: 1.3rem;
-        /* Slightly larger value font */
-        color: #008060;
-        /* Green color, slightly adjusted */
-        font-weight: 600;
-        /* Slightly heavier value weight */
-        text-align: left;
-        /* Align value to left */
-    }
-
-    #revenueChart {
-        width: 100%;
-        height: 320px;
-        /* Slightly taller chart area */
-        margin-top: 2rem;
-    }
-
-    /* --- Main Content and Animations --- */
-    .main-content {
-        padding: 3rem;
-        /* Increased main content padding */
-    }
-
-    .fade-in {
-        animation: fadeIn ease 0.6s;
-        /* Slightly slower fade-in */
-    }
-
-    .slide-up {
-        animation: slideUp ease 0.6s;
-        /* Slightly slower slide-up */
-    }
-
-    @keyframes fadeIn {
-        0% {
-            opacity: 0;
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube Analytics Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <style>
+        body {
+            background-color: #f4f6f9;
         }
 
-        100% {
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideUp {
-        0% {
-            transform: translateY(40px);
-            /* Increased translateY for more noticeable slide-up */
-            opacity: 0;
+        .link-youtube-card {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(70, 70, 70, 0.08);
+            margin-bottom: 2.5rem;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
         }
 
-        100% {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-
-    /* --- Loading Overlay --- */
-    .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.85);
-        /* Slightly less transparent overlay */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .loading-spinner {
-        border: 6px solid #f3f3f3;
-        /* Light grey border */
-        border-top: 6px solid #3498db;
-        /* Blue loading color */
-        border-radius: 50%;
-        width: 60px;
-        /* Slightly larger spinner */
-        height: 60px;
-        animation: spin 1.8s linear infinite;
-        /* Slightly faster spin */
-    }
-
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
+        .link-youtube-card:hover {
+            box-shadow: 0 12px 28px rgba(70, 70, 70, 0.12);
+            transform: translateY(-3px);
+            transition: all 0.35s ease-in-out;
         }
 
-        100% {
-            transform: rotate(360deg);
+        .link-youtube-card-header {
+            padding: 1.75rem 2rem;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #e0e0e0;
         }
-    }
 
-    /* --- Token Display Area --- */
-    .token-display {
-        margin-top: 3rem;
-        /* Increased margin top */
-        padding: 1.5rem;
-        /* Increased padding */
-        border: 1px dashed #ccc;
-        /* Dashed border to indicate development purpose */
-        border-radius: 10px;
-        /* Rounded corners */
-        background-color: #fefefe;
-        /* Very light background */
-        font-size: 0.95rem;
-        /* Slightly larger token font */
-        word-wrap: break-word;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-        /* Subtle shadow */
-    }
+        .link-youtube-card-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0;
+        }
 
-    .token-title {
-        font-weight: 600;
-        /* Slightly lighter token title weight */
-        margin-bottom: 0.7rem;
-        /* Adjusted margin */
-        color: #555;
-    }
+        .link-youtube-card-body {
+            padding: 2.5rem;
+            text-align: center;
+        }
 
-    .token-display textarea.form-control {
-        font-size: 0.85rem;
-        /* Slightly smaller textarea font */
-        background-color: #f0f0f0;
-        /* Lighter textarea background */
-        border: 1px solid #ddd;
-        /* Lighter textarea border */
-        border-radius: 6px;
-        /* Rounded textarea corners */
-        padding: 0.75rem;
-        /* Adjusted textarea padding */
-        margin-bottom: 1rem;
-        /* Adjusted textarea margin */
-        color: #444;
-        /* Darker textarea text color */
-    }
+        .youtube-connect-btn {
+            background-color: #e31b23;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 1.1rem 2.2rem;
+            font-size: 1.15rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out;
+            margin-bottom: 1.2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
 
-    .text-muted.mt-3,
-    .text-muted.mt-2 {
-        color: #888 !important;
-        /* Muted text color adjustments */
-        font-size: 0.95rem;
-    }
+        .youtube-connect-btn:hover {
+            background-color: #c4171d;
+            transform: scale(1.03);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+        }
 
-    .text-success {
-        color: #28a745 !important;
-        /* Success text color adjustment */
-        font-weight: 500;
-    }
+        .youtube-connect-btn:active {
+            transform: scale(1);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
 
-    .alert-danger {
-        border-radius: 8px;
-        padding: 1rem 1.5rem;
-        margin-bottom: 1.5rem;
-        font-size: 0.95rem;
-    }
-</style>
+        .youtube-icon {
+            width: 25px;
+            height: 25px;
+            margin-right: 12px;
+            filter: brightness(0) invert(1);
+        }
 
-<div class="col-md-10 main-content">
-    <div class="fade-in">
-        <h2 class="fw-bold text-dark mb-3">Link Your YouTube Channel</h2>
-        <p class="text-muted mb-4">Connect your YouTube channel to unlock insights and manage your content.</p>
+        .channel-info {
+            margin-top: 2.5rem;
+            padding: 2rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
 
-        <div class="link-youtube-card slide-up">
-            <div class="link-youtube-card-header">
-                <h5 class="link-youtube-card-title">Connect Your Channel</h5>
-            </div>
-            <div class="link-youtube-card-body">
-                <?php if (!empty($youtube_error_message)): ?>
-                    <div class="alert alert-danger" role="alert"><?php echo htmlspecialchars($youtube_error_message); ?></div>
+        .channel-thumbnail {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border: 3px solid #fff;
+        }
+
+        .channel-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #3a4750;
+            margin-bottom: 0.7rem;
+        }
+
+        .channel-stats {
+            font-size: 1.05rem;
+            color: #777;
+            margin-bottom: 0.5rem;
+        }
+
+        .revenue-stats {
+            margin-top: 2rem;
+            padding: 2rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .revenue-stat-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .revenue-stat-item {
+            margin-bottom: 1.2rem;
+        }
+
+        .revenue-stat-label {
+            font-weight: 500;
+            color: #555;
+            display: block;
+            margin-bottom: 0.3rem;
+            font-size: 1.05rem;
+            text-align: left;
+        }
+
+        .revenue-stat-value {
+            font-size: 1.3rem;
+            color: #008060;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        #revenueChart {
+            width: 100%;
+            height: 320px;
+            margin-top: 2rem;
+        }
+
+        #calendar {
+            max-width: 900px;
+            margin: 2rem auto;
+        }
+
+        .fc-toolbar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .fc-daygrid-day-number {
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .fc-event {
+            font-size: 0.85rem;
+        }
+
+        .main-content {
+            padding: 3rem;
+        }
+
+        .fade-in {
+            animation: fadeIn ease 0.6s;
+        }
+
+        .slide-up {
+            animation: slideUp ease 0.6s;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            0% {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .loading-spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .token-display {
+            margin-top: 2.5rem;
+            padding: 1.2rem;
+            border: 1px dashed #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .token-title {
+            font-weight: 600;
+            margin-bottom: 0.7rem;
+            color: #555;
+        }
+
+        .token-display textarea.form-control {
+            font-size: 0.85rem;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            color: #444;
+        }
+
+        .text-muted.mt-3,
+        .text-muted.mt-2 {
+            color: #777 !important;
+            font-size: 0.9rem;
+        }
+
+        .text-success {
+            color: #28a745 !important;
+            font-weight: 500;
+        }
+
+        .alert-danger {
+            border-radius: 6px;
+            padding: 0.9rem 1.4rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.9rem;
+        }
+
+        .table th,
+        .table td {
+            vertical-align: middle;
+            padding: 0.7rem 0.6rem;
+            font-size: 0.95rem;
+        }
+
+        .table-light thead th {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .date-filter-form {
+            max-width: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .date-filter-form>div {
+            flex-grow: 1;
+            min-width: 140px;
+        }
+
+        .date-filter-form button {
+            height: auto;
+            margin-top: 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 2rem;
+            }
+
+            .link-youtube-card-header {
+                padding: 1.2rem 1.5rem;
+            }
+
+            .link-youtube-card-body {
+                padding: 1.5rem;
+            }
+
+            .channel-info,
+            .revenue-stats {
+                padding: 1.5rem;
+            }
+
+            .token-display {
+                margin-top: 2rem;
+                padding: 1rem;
+            }
+
+            .date-filter-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .date-filter-form button {
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="col-md-10 main-content">
+        <div class="fade-in">
+            <h2 class="fw-bold text-dark mb-3">YouTube Analytics Dashboard</h2>
+            <p class="text-muted mb-4">Connect your YouTube channel to view EUR-based revenue insights, explore detailed charts, and see your revenue events on a calendar.</p>
+            <form method="GET" class="date-filter-form">
+                <?php if (!empty($authorization_code)): ?>
+                    <input type="hidden" name="code" value="<?php echo htmlspecialchars($authorization_code); ?>">
                 <?php endif; ?>
-
-                <?php if (!$access_token): ?>
-                    <p>To get started, link your YouTube channel.</p>
-                    <a href="<?php echo htmlspecialchars($oauth_url); ?>" class="youtube-connect-btn">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/7/75/YouTube_social_white_squircle_%282017%29.svg" alt="YouTube Icon" class="youtube-icon">
-                        Connect with YouTube
-                    </a>
-                    <p class="text-muted mt-3">By connecting, you grant permission to view your YouTube channel data.</p>
-                <?php else: ?>
-                    <div class="channel-info">
-                        <?php if ($channel_thumbnail): ?>
-                            <img src="<?php echo htmlspecialchars($channel_thumbnail); ?>" alt="Channel Thumbnail" class="channel-thumbnail">
-                        <?php endif; ?>
-                        <?php if ($channel_name): ?>
-                            <h4 class="channel-name"><?php echo htmlspecialchars($channel_name); ?></h4>
-                        <?php endif; ?>
-                        <?php if ($view_count != 'N/A'): ?>
-                            <p class="channel-stats">Total Views: <?php echo htmlspecialchars($view_count); ?></p>
-                        <?php endif; ?>
-                        <p class="text-success">Channel successfully linked!</p>
-                        <button class="youtube-connect-btn" onclick="disconnectYouTube()" style="background-color:#4285F4;">
-                            <i class="fas fa-unlink youtube-icon"></i> Disconnect YouTube
-                        </button>
-                    </div>
-
-                    <div class="revenue-stats">
-                        <h4 class="revenue-stat-title mb-3">Revenue Overview (Last 30 Days)</h4>
-                        <div class="revenue-stat-item">
-                            <span class="revenue-stat-label">Estimated Revenue (Total)</span>
-                            <span class="revenue-stat-value">$<?php echo htmlspecialchars($estimated_revenue_total); ?></span>
+                <div>
+                    <label for="start_date">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" value="<?php echo htmlspecialchars($start_date); ?>">
+                </div>
+                <div>
+                    <label for="end_date">End Date</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control" value="<?php echo htmlspecialchars($end_date); ?>">
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                </div>
+            </form>
+            <div class="link-youtube-card slide-up">
+                <div class="link-youtube-card-header">
+                    <h5 class="link-youtube-card-title">Connect Your Channel</h5>
+                </div>
+                <div class="link-youtube-card-body">
+                    <?php if (!empty($youtube_error_message)): ?>
+                        <script>
+                            Toastify({
+                                text: "<?php echo htmlspecialchars($youtube_error_message); ?>",
+                                duration: 5000,
+                                gravity: "top",
+                                position: "right",
+                                backgroundColor: "#d9534f"
+                            }).showToast();
+                        </script>
+                    <?php endif; ?>
+                    <?php if (!$access_token): ?>
+                        <p>To get started, link your YouTube channel.</p>
+                        <a href="<?php echo htmlspecialchars($oauth_url); ?>" class="youtube-connect-btn">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/7/75/YouTube_social_white_squircle_%282017%29.svg" alt="YouTube Icon" class="youtube-icon">
+                            Connect with YouTube
+                        </a>
+                        <p class="text-muted mt-3"><i class="fas fa-info-circle me-1"></i> By connecting, you grant permission to securely view your YouTube channel data for analytics and insights within this dashboard.</p>
+                    <?php else: ?>
+                        <div class="channel-info">
+                            <?php if ($channel_thumbnail): ?>
+                                <img src="<?php echo htmlspecialchars($channel_thumbnail); ?>" alt="Channel Thumbnail" class="channel-thumbnail">
+                            <?php endif; ?>
+                            <?php if ($channel_name): ?>
+                                <h4 class="channel-name"><?php echo htmlspecialchars($channel_name); ?></h4>
+                            <?php endif; ?>
+                            <?php if ($view_count != 'N/A'): ?>
+                                <p class="channel-stats"><i class="fas fa-eye me-1"></i> Total Views: <?php echo htmlspecialchars($view_count); ?></p>
+                            <?php endif; ?>
+                            <p class="text-success"><i class="fas fa-check-circle me-1"></i> Channel successfully linked!</p>
+                            <button class="youtube-connect-btn" onclick="disconnectYouTube()" style="background-color:#4285F4;">
+                                <i class="fas fa-unlink youtube-icon"></i> Disconnect YouTube
+                            </button>
                         </div>
-                        <div id="revenueChart"></div>
-                    </div>
-
-                    <div class="token-display">
-                        <p class="token-title">For Development/Verification Only (Tokens are Session-Based - Not Persistent for a Day in this Example)</p>
-                        <p class="token-title">Access Token:</p>
-                        <textarea rows="3" class="form-control" readonly><?php echo htmlspecialchars($access_token); ?></textarea>
-                        <p class="token-title">Refresh Token:</p>
-                        <textarea rows="3" class="form-control" readonly><?php echo htmlspecialchars($refresh_token); ?></textarea>
-                        <p class="text-muted mt-2"><b>Important:</b> These tokens are displayed for development verification only and are stored in a session. Do not expose tokens in a production UI. For production, implement secure server-side token storage and refresh token handling.</p>
-                    </div>
-
-                <?php endif; ?>
+                        <div class="revenue-stats">
+                            <h4 class="revenue-stat-title"><i class="fas fa-chart-line me-2"></i> Revenue Overview</h4>
+                            <div class="revenue-stat-item">
+                                <span class="revenue-stat-label">Estimated Revenue (<?php echo htmlspecialchars($start_date . ' to ' . $end_date); ?>, EUR)</span>
+                                <span class="revenue-stat-value">€<?php echo htmlspecialchars($estimated_revenue_total); ?></span>
+                            </div>
+                            <div id="revenueChart"></div>
+                        </div>
+                        <div id="calendar"></div>
+                        <div class="token-display">
+                            <p class="token-title">Access Token:</p>
+                            <textarea rows="3" class="form-control" readonly><?php echo htmlspecialchars($access_token); ?></textarea>
+                            <p class="token-title">Refresh Token:</p>
+                            <textarea rows="3" class="form-control" readonly><?php echo htmlspecialchars($refresh_token); ?></textarea>
+                            <p class="text-muted mt-2"><i class="fas fa-info-circle me-1"></i> These tokens are sensitive. Handle with care and do not expose them in production.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+        </div>
     </div>
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-spinner"></div>
-    </div>
-</div>
+    <script>
+        function disconnectYouTube() {
+            window.location.href = 'logout-youtube.php';
+        }
 
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-<script>
-    function disconnectYouTube() {
-        // Clear session tokens by redirecting to a logout action (you'd need to create logout.php to destroy session)
-        window.location.href = 'logout-youtube.php';
-    }
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
 
-    document.addEventListener('DOMContentLoaded', function() {
-
-
-        // Revenue Chart
-        var revenueData = <?php echo json_encode($revenue_data_daily); ?>;
-        var chartOptions = {
-            chart: {
-                type: 'line',
-                height: 300,
-                toolbar: {
-                    show: false
-                }
-            },
-            series: [{
-                name: 'Estimated Revenue',
-                data: revenueData.map(item => [item.date, parseFloat(item.revenue || 0)]) // Handle potentially missing revenue, convert to float
-            }],
-            xaxis: {
-                type: 'datetime',
-                labels: {
-                    datetimeUTC: false,
-                    format: 'MMM dd',
-                }
-            },
-            yaxis: {
-                labels: {
-                    formatter: function(value) {
-                        return "$" + value.toFixed(2);
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var revenueData = <?php echo json_encode($revenue_data_daily); ?>;
+            if (revenueData && revenueData.length) {
+                var revenueChartOptions = {
+                    chart: {
+                        type: 'line',
+                        height: 300,
+                        toolbar: {
+                            show: true
+                        },
+                        animations: {
+                            enabled: true,
+                            easing: 'easeinout',
+                            speed: 800
+                        },
+                        dropShadow: {
+                            enabled: true,
+                            top: 3,
+                            left: 2,
+                            blur: 4,
+                            opacity: 0.2
+                        }
+                    },
+                    markers: {
+                        size: 4
+                    },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            shadeIntensity: 1,
+                            inverseColors: false,
+                            opacityFrom: 0.5,
+                            opacityTo: 0.1,
+                            stops: [0, 90, 100]
+                        }
+                    },
+                    series: [{
+                        name: 'Estimated Revenue (€)',
+                        data: revenueData.map(item => [item.date, parseFloat(item.revenue || 0)])
+                    }],
+                    xaxis: {
+                        type: 'datetime',
+                        labels: {
+                            datetimeUTC: false,
+                            format: 'MMM dd'
+                        }
+                    },
+                    yaxis: {
+                        labels: {
+                            formatter: function(value) {
+                                return "€" + value.toFixed(2);
+                            }
+                        },
+                        title: {
+                            text: 'EUR'
+                        }
+                    },
+                    tooltip: {
+                        x: {
+                            format: 'yyyy-MM-dd'
+                        },
+                        y: {
+                            formatter: function(value) {
+                                return "€" + value.toFixed(2);
+                            }
+                        }
+                    },
+                    grid: {
+                        borderColor: '#e0e0e0'
                     }
+                };
+                var revenueChart = new ApexCharts(document.querySelector("#revenueChart"), revenueChartOptions);
+                revenueChart.render();
+            }
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                title: {
-                    text: 'USD',
+                height: 500,
+                eventColor: '#008060',
+                eventTextColor: '#fff',
+                events: revenueData.map(function(item) {
+                    return {
+                        title: "€" + parseFloat(item.revenue).toFixed(2),
+                        start: item.date,
+                        allDay: true
+                    };
+                }),
+                eventDidMount: function(info) {
+                    info.el.style.fontSize = '0.85rem';
+                    info.el.style.fontWeight = '500';
                 },
-            },
-            tooltip: {
-                x: {
-                    format: 'yyyy-MM-dd'
-                },
-                y: {
-                    formatter: function(value) {
-                        return "$" + value.toFixed(2);
-                    }
-                }
-            },
-            colors: ['#49b382'], // Example color
-        };
+                eventDisplay: 'block'
+            });
+            calendar.render();
+            hideLoading();
+        });
+        <?php if ($authorization_code && empty($youtube_error_message)): ?> showLoading();
+        <?php endif; ?>
+    </script>
+    <?php include 'footer.php'; ?>
+</body>
 
-        var chart = new ApexCharts(document.querySelector("#revenueChart"), chartOptions);
-        chart.render();
-
-        // Hide loading overlay after chart render (or after API calls complete if you manage loading state differently)
-        hideLoading();
-    });
-
-    function showLoading() {
-        document.getElementById('loadingOverlay').style.display = 'flex';
-    }
-
-    function hideLoading() {
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }
-
-    <?php if ($authorization_code && empty($youtube_error_message)): ?>
-        showLoading(); // Show loading only when we expect data to load after auth code exchange
-    <?php endif; ?>
-</script>
-
-<?php include 'footer.php'; ?>
+</html>
