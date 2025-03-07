@@ -2,26 +2,47 @@
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
-
 $youtube_client_id = '889125415131-qfi8c11iibraqj82aal4fc8q4oic2m5u.apps.googleusercontent.com';
 $youtube_client_secret = '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';
 $redirect_uri = 'http://localhost/client-baresha-web/link-youtube.php';
-
 $authorization_code = $_GET['code'] ?? '';
 $access_token = $_SESSION['youtube_access_token'] ?? '';
 $refresh_token = $_SESSION['youtube_refresh_token'] ?? '';
-
 $channel_name = '';
 $channel_thumbnail = '';
 $view_count = 'N/A';
 $estimated_revenue_total = 'N/A';
 $revenue_data_daily = [];
 $youtube_error_message = '';
-
 $start_date = !empty($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
 $end_date = !empty($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
-
-function fetchYoutubeApiData($api_url, $access_token)
+function refreshYoutubeAccessToken($client_id, $client_secret, $refresh_token, $redirect_uri)
+{
+    $token_url = 'https://oauth2.googleapis.com/token';
+    $params = [
+        'client_id' => $client_id,
+        'client_secret' => $client_secret,
+        'refresh_token' => $refresh_token,
+        'grant_type' => 'refresh_token',
+        'redirect_uri' => $redirect_uri
+    ];
+    $ch = curl_init($token_url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($curl_error) {
+        return ['error' => 'cURL error: ' . $curl_error];
+    }
+    if ($http_code != 200) {
+        return ['error' => 'HTTP error: ' . $http_code . ' - ' . $response];
+    }
+    return json_decode($response, true);
+}
+function fetchYoutubeApiData($api_url, $access_token, $client_id = null, $client_secret = null, $refresh_token = null, $redirect_uri = null, $retry = false)
 {
     $ch = curl_init($api_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -33,11 +54,27 @@ function fetchYoutubeApiData($api_url, $access_token)
     $curl_error = curl_error($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    if ($curl_error) return ['error' => 'cURL error: ' . $curl_error];
-    if ($http_code != 200) return ['error' => 'HTTP error: ' . $http_code . ' - ' . $response_json];
+    if ($curl_error) {
+        return ['error' => 'cURL error: ' . $curl_error];
+    }
+    if ($http_code == 401 && !$retry && !empty($client_id) && !empty($client_secret) && !empty($refresh_token) && !empty($redirect_uri)) {
+        $newTokenResponse = refreshYoutubeAccessToken($client_id, $client_secret, $refresh_token, $redirect_uri);
+        if (!empty($newTokenResponse['access_token'])) {
+            $_SESSION['youtube_access_token'] = $newTokenResponse['access_token'];
+            $access_token = $newTokenResponse['access_token'];
+            if (!empty($newTokenResponse['refresh_token'])) {
+                $_SESSION['youtube_refresh_token'] = $newTokenResponse['refresh_token'];
+            }
+            return fetchYoutubeApiData($api_url, $access_token, $client_id, $client_secret, $refresh_token, $redirect_uri, true);
+        } else {
+            return ['error' => 'Failed to refresh access token.'];
+        }
+    }
+    if ($http_code != 200) {
+        return ['error' => 'HTTP error: ' . $http_code . ' - ' . $response_json];
+    }
     return json_decode($response_json, true);
 }
-
 if ($authorization_code) {
     $token_url = 'https://oauth2.googleapis.com/token';
     $token_params = [
@@ -68,7 +105,7 @@ if ($authorization_code) {
             $_SESSION['youtube_access_token'] = $access_token;
             $_SESSION['youtube_refresh_token'] = $refresh_token;
             $channel_info_url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true';
-            $channel_data = fetchYoutubeApiData($channel_info_url, $access_token);
+            $channel_data = fetchYoutubeApiData($channel_info_url, $access_token, $youtube_client_id, $youtube_client_secret, $refresh_token, $redirect_uri);
             if (!empty($channel_data['error'])) {
                 $youtube_error_message .= ' Channel info error: ' . $channel_data['error'];
             } elseif (!empty($channel_data['items'][0])) {
@@ -83,7 +120,6 @@ if ($authorization_code) {
         }
     }
 }
-
 if ($access_token) {
     $analytics_url = 'https://youtubeanalytics.googleapis.com/v2/reports';
     $params_for_chart = [
@@ -96,7 +132,7 @@ if ($access_token) {
         'currency' => 'EUR'
     ];
     $chart_query = $analytics_url . '?' . http_build_query($params_for_chart);
-    $analytics_data = fetchYoutubeApiData($chart_query, $access_token);
+    $analytics_data = fetchYoutubeApiData($chart_query, $access_token, $youtube_client_id, $youtube_client_secret, $refresh_token, $redirect_uri);
     if (!empty($analytics_data['error'])) {
         $youtube_error_message .= ' Revenue data error: ' . $analytics_data['error'];
     } elseif (!empty($analytics_data['rows'])) {
@@ -112,7 +148,6 @@ if ($access_token) {
         $estimated_revenue_total = 'No revenue data available';
     }
 }
-
 $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
     'client_id' => $youtube_client_id,
     'redirect_uri' => $redirect_uri,
@@ -124,7 +159,6 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>YouTube Analytics Dashboard</title>
@@ -136,42 +170,36 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <style>
         body {
-            background-color: #f4f6f9;
+            background-color: #f4f6f9
         }
-
         .link-youtube-card {
             background-color: #fff;
             border-radius: 10px;
             box-shadow: 0 8px 20px rgba(70, 70, 70, 0.08);
             margin-bottom: 2.5rem;
             overflow: hidden;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #e0e0e0
         }
-
         .link-youtube-card:hover {
             box-shadow: 0 12px 28px rgba(70, 70, 70, 0.12);
             transform: translateY(-3px);
-            transition: all 0.35s ease-in-out;
+            transition: all 0.35s ease-in-out
         }
-
         .link-youtube-card-header {
             padding: 1.75rem 2rem;
             background-color: #f9f9f9;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0
         }
-
         .link-youtube-card-title {
             font-size: 1.6rem;
             font-weight: 600;
             color: #333;
-            margin-bottom: 0;
+            margin-bottom: 0
         }
-
         .link-youtube-card-body {
             padding: 2.5rem;
-            text-align: center;
+            text-align: center
         }
-
         .youtube-connect-btn {
             background-color: #e31b23;
             color: #fff;
@@ -186,36 +214,31 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08)
         }
-
         .youtube-connect-btn:hover {
             background-color: #c4171d;
             transform: scale(1.03);
-            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.12)
         }
-
         .youtube-connect-btn:active {
             transform: scale(1);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08)
         }
-
         .youtube-icon {
             width: 25px;
             height: 25px;
             margin-right: 12px;
-            filter: brightness(0) invert(1);
+            filter: brightness(0) invert(1)
         }
-
         .channel-info {
             margin-top: 2.5rem;
             padding: 2rem;
             border: 1px solid #e0e0e0;
             border-radius: 10px;
             background-color: #fff;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05)
         }
-
         .channel-thumbnail {
             width: 120px;
             height: 120px;
@@ -223,118 +246,98 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
             object-fit: cover;
             margin-bottom: 1.2rem;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border: 3px solid #fff;
+            border: 3px solid #fff
         }
-
         .channel-name {
             font-size: 1.5rem;
             font-weight: 600;
             color: #3a4750;
-            margin-bottom: 0.7rem;
+            margin-bottom: 0.7rem
         }
-
         .channel-stats {
             font-size: 1.05rem;
             color: #777;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.5rem
         }
-
         .revenue-stats {
             margin-top: 2rem;
             padding: 2rem;
             border: 1px solid #e0e0e0;
             border-radius: 10px;
             background-color: #fff;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05)
         }
-
         .revenue-stat-title {
             font-size: 1.4rem;
             font-weight: 600;
             color: #333;
             margin-bottom: 1.5rem;
-            text-align: left;
+            text-align: left
         }
-
         .revenue-stat-item {
-            margin-bottom: 1.2rem;
+            margin-bottom: 1.2rem
         }
-
         .revenue-stat-label {
             font-weight: 500;
             color: #555;
             display: block;
             margin-bottom: 0.3rem;
             font-size: 1.05rem;
-            text-align: left;
+            text-align: left
         }
-
         .revenue-stat-value {
             font-size: 1.3rem;
             color: #008060;
             font-weight: 600;
-            text-align: left;
+            text-align: left
         }
-
         #revenueChart {
             width: 100%;
             height: 320px;
-            margin-top: 2rem;
+            margin-top: 2rem
         }
-
         #calendar {
             max-width: 900px;
-            margin: 2rem auto;
+            margin: 2rem auto
         }
-
         .fc-toolbar-title {
             font-size: 1.5rem;
-            font-weight: 600;
+            font-weight: 600
         }
-
         .fc-daygrid-day-number {
             font-size: 1rem;
-            color: #333;
+            color: #333
         }
-
         .fc-event {
-            font-size: 0.85rem;
+            font-size: 0.85rem
         }
-
         .main-content {
-            padding: 3rem;
+            padding: 3rem
         }
-
         .fade-in {
-            animation: fadeIn ease 0.6s;
+            animation: fadeIn ease 0.6s
         }
-
         .slide-up {
-            animation: slideUp ease 0.6s;
+            animation: slideUp ease 0.6s
         }
-
         @keyframes fadeIn {
             0% {
-                opacity: 0;
+                opacity: 0
             }
-
             100% {
-                opacity: 1;
+                opacity: 1
             }
         }
-
         @keyframes slideUp {
             0% {
                 transform: translateY(40px);
-                opacity: 0;
+                opacity: 0
             }
-
             100% {
                 transform: translateY(0);
-                opacity: 1;
+                opacity: 1
             }
         }
-
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -346,28 +349,24 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px)
         }
-
         .loading-spinner {
             border: 6px solid #f3f3f3;
             border-top: 6px solid #3498db;
             border-radius: 50%;
             width: 60px;
             height: 60px;
-            animation: spin 1.8s linear infinite;
+            animation: spin 1.8s linear infinite
         }
-
         @keyframes spin {
             0% {
-                transform: rotate(0deg);
+                transform: rotate(0deg)
             }
-
             100% {
-                transform: rotate(360deg);
+                transform: rotate(360deg)
             }
         }
-
         .token-display {
             margin-top: 2.5rem;
             padding: 1.2rem;
@@ -376,15 +375,13 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
             background-color: #fff;
             font-size: 0.9rem;
             word-wrap: break-word;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06)
         }
-
         .token-title {
             font-weight: 600;
             margin-bottom: 0.7rem;
-            color: #555;
+            color: #555
         }
-
         .token-display textarea.form-control {
             font-size: 0.85rem;
             background-color: #f0f0f0;
@@ -392,93 +389,77 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
             border-radius: 6px;
             padding: 0.75rem;
             margin-bottom: 1rem;
-            color: #444;
+            color: #444
         }
-
         .text-muted.mt-3,
         .text-muted.mt-2 {
             color: #777 !important;
-            font-size: 0.9rem;
+            font-size: 0.9rem
         }
-
         .text-success {
             color: #28a745 !important;
-            font-weight: 500;
+            font-weight: 500
         }
-
         .alert-danger {
             border-radius: 6px;
             padding: 0.9rem 1.4rem;
             margin-bottom: 1.2rem;
-            font-size: 0.9rem;
+            font-size: 0.9rem
         }
-
         .table th,
         .table td {
             vertical-align: middle;
             padding: 0.7rem 0.6rem;
-            font-size: 0.95rem;
+            font-size: 0.95rem
         }
-
         .table-light thead th {
             background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6
         }
-
         .date-filter-form {
             max-width: none;
             display: flex;
             flex-wrap: wrap;
             gap: 0.8rem;
             align-items: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.5rem
         }
-
         .date-filter-form>div {
             flex-grow: 1;
-            min-width: 140px;
+            min-width: 140px
         }
-
         .date-filter-form button {
             height: auto;
-            margin-top: 0;
+            margin-top: 0
         }
-
-        @media (max-width: 768px) {
+        @media (max-width:768px) {
             .main-content {
-                padding: 2rem;
+                padding: 2rem
             }
-
             .link-youtube-card-header {
-                padding: 1.2rem 1.5rem;
+                padding: 1.2rem 1.5rem
             }
-
             .link-youtube-card-body {
-                padding: 1.5rem;
+                padding: 1.5rem
             }
-
             .channel-info,
             .revenue-stats {
-                padding: 1.5rem;
+                padding: 1.5rem
             }
-
             .token-display {
                 margin-top: 2rem;
-                padding: 1rem;
+                padding: 1rem
             }
-
             .date-filter-form {
                 flex-direction: column;
-                align-items: stretch;
+                align-items: stretch
             }
-
             .date-filter-form button {
-                margin-top: 0.5rem;
+                margin-top: 0.5rem
             }
         }
     </style>
 </head>
-
 <body>
     <div class="col-md-10 main-content">
         <div class="fade-in">
@@ -509,10 +490,12 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
                         <script>
                             Toastify({
                                 text: "<?php echo htmlspecialchars($youtube_error_message); ?>",
-                                duration: 5000,
+                                duration: 6000,
                                 gravity: "top",
                                 position: "right",
-                                backgroundColor: "#d9534f"
+                                backgroundColor: "#d9534f",
+                                close: true,
+                                stopOnFocus: true
                             }).showToast();
                         </script>
                     <?php endif; ?>
@@ -565,15 +548,13 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
     </div>
     <script>
         function disconnectYouTube() {
-            window.location.href = 'logout-youtube.php';
+            window.location.href = 'logout-youtube.php'
         }
-
         function showLoading() {
-            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingOverlay').style.display = 'flex'
         }
-
         function hideLoading() {
-            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'none'
         }
         document.addEventListener('DOMContentLoaded', function() {
             var revenueData = <?php echo json_encode($revenue_data_daily); ?>;
@@ -625,7 +606,7 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
                     yaxis: {
                         labels: {
                             formatter: function(value) {
-                                return "€" + value.toFixed(2);
+                                return "€" + value.toFixed(2)
                             }
                         },
                         title: {
@@ -638,7 +619,7 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
                         },
                         y: {
                             formatter: function(value) {
-                                return "€" + value.toFixed(2);
+                                return "€" + value.toFixed(2)
                             }
                         }
                     },
@@ -665,11 +646,11 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
                         title: "€" + parseFloat(item.revenue).toFixed(2),
                         start: item.date,
                         allDay: true
-                    };
+                    }
                 }),
                 eventDidMount: function(info) {
                     info.el.style.fontSize = '0.85rem';
-                    info.el.style.fontWeight = '500';
+                    info.el.style.fontWeight = '500'
                 },
                 eventDisplay: 'block'
             });
@@ -681,5 +662,4 @@ $oauth_url = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query(
     </script>
     <?php include 'footer.php'; ?>
 </body>
-
 </html>
