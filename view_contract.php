@@ -853,7 +853,7 @@ try {
                             <canvas id="signature" width="400" height="200" class="border rounded"></canvas>
                             <input type="hidden" name="signatureData" id="signatureData">
                         </div>
-                        <button type="submit" class="btn btn-primary me-2" id="submitSignature" disabled>
+                        <button type="submit" class="btn btn-primary me-2" id="submitSignature">
                             <i class="fas fa-paper-plane"></i> Dërgo / Submit
                         </button>
                         <button type="button" class="btn btn-secondary" onclick="clearSignaturePad()">
