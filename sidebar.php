@@ -9,7 +9,6 @@ $navItems = [
     ['title' => 'General Contract', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
     ['title' => 'Song Contract', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
     ['title' => 'Link YouTube', 'icon' => 'bi-youtube', 'url' => 'link-youtube.php'],
-    
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentUserName = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : "User";
@@ -58,6 +57,14 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
             <i class="bi bi-box-arrow-right me-2"></i>
             <span class="sidebar-text">Logout</span>
         </a>
+    </div>
+    <!-- Theme Mode Selector -->
+    <div class="p-2 theme-toggle">
+        <select id="themeSelector" class="form-select form-select-sm">
+            <option value="light">Light Mode</option>
+            <option value="dark">Dark Mode</option>
+            <option value="system">System Mode</option>
+        </select>
     </div>
 </div>
 
@@ -192,9 +199,7 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         background-color: #f8f9fa;
         border-top: 1px solid #eee;
         margin-top: auto;
-        /* Push user panel to the bottom, but logout below it */
         border-bottom: 1px solid #eee;
-        /* Added border to separate from logout */
     }
 
     .user-link {
@@ -227,9 +232,7 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
 
     .logout-panel {
         background-color: #f8f9fa;
-        /* Match sidebar background */
         margin-top: 0;
-        /* Ensure it's directly after user panel */
     }
 
     .logout-link {
@@ -237,7 +240,6 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         align-items: center;
         padding: 0.5rem 0.75rem;
         color: #dc3545;
-        /* Example: Red color for logout */
         text-decoration: none !important;
         transition: background-color 0.15s ease;
         border-radius: 0.25rem;
@@ -247,17 +249,54 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
 
     .logout-link:hover {
         background-color: #f8d7da;
-        /* Light red on hover */
         color: #dc3545;
     }
 
     .logout-link i {
         color: #dc3545;
-        /* Red icon for logout */
     }
 
+    /* Theme selector styling */
+    .theme-toggle {
+        padding: 0.5rem 0.75rem;
+    }
 
-    /* Add media query for mobile devices */
+    /* Dark mode overrides */
+    .dark-mode {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+
+    .dark-mode .sidebar {
+        background-color: #1e1e1e;
+        border-right: 1px solid #333;
+    }
+
+    .dark-mode .brand-name {
+        color: #66b0ff !important;
+    }
+
+    .dark-mode .nav-link {
+        color: #ccc;
+    }
+
+    .dark-mode .nav-link:hover,
+    .dark-mode .nav-link.active {
+        background-color: #333;
+        color: #fff;
+    }
+
+    .dark-mode .user-panel,
+    .dark-mode .logout-panel {
+        background-color: #1e1e1e;
+        border-color: #333;
+    }
+
+    .dark-mode .user-link:hover {
+        background-color: #2c2c2c;
+    }
+
+    /* Media query for mobile devices */
     @media (max-width: 767.98px) {
         .sidebar:not(.sidebar-collapsed) {
             transform: translateX(-100%);
@@ -278,6 +317,7 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
     document.addEventListener('DOMContentLoaded', function() {
         const sidebar = document.getElementById('sidebar');
         const toggleBtn = document.getElementById('sidebarCollapseBtn');
+        const themeSelector = document.getElementById('themeSelector');
 
         // Initialize tooltips only if sidebar is collapsed
         function initTooltips() {
@@ -295,7 +335,7 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         // Destroy all tooltips
         function destroyTooltips() {
             document.querySelectorAll('.nav-link').forEach(link => {
-                if (!link.classList.contains('logout-link')) { // Exclude logout link from tooltip destruction
+                if (!link.classList.contains('logout-link')) {
                     const tooltip = bootstrap.Tooltip.getInstance(link);
                     if (tooltip) {
                         tooltip.dispose();
@@ -312,28 +352,17 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         // Toggle sidebar when button is clicked
         toggleBtn.addEventListener('click', function(e) {
             e.preventDefault();
-
-            // Destroy existing tooltips first
             destroyTooltips();
-
-            // Toggle sidebar class
             sidebar.classList.toggle('sidebar-collapsed');
-
-            // Set appropriate tooltip attributes based on sidebar state
-            const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-
-            // Initialize tooltips if sidebar is collapsed
-            if (isCollapsed) {
+            if (sidebar.classList.contains('sidebar-collapsed')) {
                 initTooltips();
             }
-
-            // Save state to cookie
-            document.cookie = `sidebar_collapsed=${isCollapsed}; path=/; max-age=31536000`;
+            document.cookie = `sidebar_collapsed=${sidebar.classList.contains('sidebar-collapsed')}; path=/; max-age=31536000`;
         });
 
-        // Make sure tooltips don't remain when hovering out
+        // Ensure tooltips hide when mouse leaves
         document.querySelectorAll('.nav-link').forEach(link => {
-            if (!link.classList.contains('logout-link')) { // Exclude logout link from tooltip hover out
+            if (!link.classList.contains('logout-link')) {
                 link.addEventListener('mouseleave', function() {
                     const tooltip = bootstrap.Tooltip.getInstance(this);
                     if (tooltip) {
@@ -350,6 +379,44 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
                 sidebar.classList.add('sidebar-collapsed');
                 initTooltips();
                 document.cookie = 'sidebar_collapsed=true; path=/; max-age=31536000';
+            }
+        });
+
+        // Theme functionality
+        // Retrieve saved theme from localStorage or default to "system"
+        const savedTheme = localStorage.getItem('theme-mode') || 'system';
+        themeSelector.value = savedTheme;
+        applyTheme(savedTheme);
+
+        themeSelector.addEventListener('change', function() {
+            const selectedTheme = themeSelector.value;
+            localStorage.setItem('theme-mode', selectedTheme);
+            applyTheme(selectedTheme);
+        });
+
+        function applyTheme(theme) {
+            if (theme === 'system') {
+                // Apply based on system preference
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.classList.add('dark-mode');
+                    document.body.classList.remove('light-mode');
+                } else {
+                    document.body.classList.add('light-mode');
+                    document.body.classList.remove('dark-mode');
+                }
+            } else if (theme === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.body.classList.remove('light-mode');
+            } else {
+                document.body.classList.add('light-mode');
+                document.body.classList.remove('dark-mode');
+            }
+        }
+
+        // Listen for changes in system color scheme if "system" mode is active
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (themeSelector.value === 'system') {
+                applyTheme('system');
             }
         });
     });
