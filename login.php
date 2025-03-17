@@ -45,7 +45,6 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,204 +53,188 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
         body {
-            background: linear-gradient(135deg, #4e73df, #224abe);
+            background: #fff;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow-x: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         .login-container {
-            background-color: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            max-width: 900px;
-            width: 100%;
-            animation: fadeIn 0.8s ease-in-out;
+            background-color: #fff;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            width: 95%;
         }
 
         .login-form {
-            padding: 2rem;
+            padding: 3rem;
         }
 
         .login-image {
-            background: linear-gradient(45deg, #4e73df, #6a89cc);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+            border-left: 1px solid #ddd;
+            position: relative;
+            overflow: hidden;
         }
 
         .form-control {
-            padding: 0.75rem;
-            border-radius: 8px;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 2px solid #E2E8F0;
+            font-size: 1rem;
+            background: rgba(255, 255, 255, 0.9);
             transition: all 0.3s ease;
         }
 
         .form-control:focus {
-            box-shadow: 0 0 10px rgba(78, 115, 223, 0.5);
-            border-color: #4e73df;
+            box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.2);
+            border-color: #6B46C1;
         }
 
         .btn-primary {
-            background-color: #4e73df;
-            border-color: #4e73df;
-            padding: 0.75rem;
-            border-radius: 8px;
-            transition: transform 0.2s ease, background-color 0.3s ease;
+            background: linear-gradient(135deg, #6B46C1, #3B82F6);
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
         }
 
         .btn-primary:hover {
-            transform: scale(1.05);
-            background-color: #4263cc;
-        }
-
-        .remember-me {
-            display: flex;
-            align-items: center;
-        }
-
-        .remember-me input {
-            margin-right: 0.5rem;
-        }
-
-        .alert {
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            animation: slideIn 0.5s ease-out;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(107, 70, 193, 0.3);
         }
 
         .input-group-text {
-            cursor: pointer;
-            background-color: transparent;
-            border-radius: 8px;
-            transition: color 0.3s ease;
+            border-radius: 12px;
+            border: 2px solid #E2E8F0;
+            background: white;
         }
 
-        .input-group-text:hover {
-            color: #4e73df;
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
         }
 
-        @keyframes fadeIn {
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            animation: floatingShapes 20s linear infinite;
+        }
+
+        @keyframes containerFadeIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(30px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
+        @keyframes floatingShapes {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-100vh) rotate(360deg); }
+        }
 
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        .remember-me {
+            gap: 0.5rem;
+        }
+
+        .form-check-input:checked {
+            background-color: #6B46C1;
+            border-color: #6B46C1;
+        }
+
+        .alert {
+            border: none;
+            border-radius: 12px;
+            padding: 1rem;
+            background: rgba(254, 226, 226, 0.5);
+            backdrop-filter: blur(4px);
         }
 
         @media (max-width: 768px) {
             .login-container {
+                width: 90%;
                 margin: 1rem;
             }
-
             .login-form {
-                padding: 1.5rem;
-            }
-
-            .login-image {
-                display: none;
-            }
-        }
-
-        @media (max-width: 576px) {
-            h2 {
-                font-size: 1.5rem;
-            }
-
-            h4 {
-                font-size: 1.25rem;
-            }
-
-            .btn-primary {
-                padding: 0.65rem;
+                padding: 2rem;
             }
         }
     </style>
 </head>
-
 <body>
     <div class="login-container">
         <div class="row g-0">
-            <div class="col-md-6 login-form">
-                <h2 class="fw-bold mb-2">Welcome to our CRM.</h2>
-                <h4 class="text-dark mb-4">Sign In to see latest updates.</h4>
-                <p class="text-muted mb-4">Enter your details to proceed further</p>
+            <div class="col-lg-6 login-form">
+                <div class="mb-4">
+                    <h2 class="fw-bold" style="color: #2D3748;">Welcome Back</h2>
+                    <p class="text-muted">Sign in to access your CRM dashboard</p>
+                </div>
                 <?php if (!empty($error_message)): ?>
-                    <div class="alert alert-danger" role="alert">
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i>
                         <?php echo $error_message; ?>
                     </div>
                 <?php endif; ?>
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
                     <div class="mb-4">
-                        <label for="perdoruesi" class="form-label text-muted">Perdoruesi</label>
+                        <label for="perdoruesi" class="form-label text-muted mb-2">Username</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="perdoruesi" name="perdoruesi" value="<?php echo isset($_POST['perdoruesi']) ? htmlspecialchars($_POST['perdoruesi']) : ''; ?>" required>
-                            <span class="input-group-text bg-transparent border-start-0">
+                            <span class="input-group-text border-end-0">
                                 <i class="bi bi-person"></i>
                             </span>
+                            <input type="text" class="form-control border-start-0" id="perdoruesi" name="perdoruesi" 
+                                value="<?php echo isset($_POST['perdoruesi']) ? htmlspecialchars($_POST['perdoruesi']) : ''; ?>" required>
                         </div>
                     </div>
                     <div class="mb-4">
-                        <label for="password" class="form-label text-muted">Password</label>
+                        <label for="password" class="form-label text-muted mb-2">Password</label>
                         <div class="input-group">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Start typing..." required>
-                            <span class="input-group-text" id="togglePassword">
+                            <span class="input-group-text border-end-0">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input type="password" class="form-control border-start-0" id="password" name="password" required>
+                            <span class="input-group-text border-start-0" id="togglePassword">
                                 <i class="bi bi-eye-slash"></i>
                             </span>
                         </div>
                     </div>
-                    <div class="mb-4 d-flex justify-content-between flex-wrap">
-                        <div class="remember-me">
+                    <div class="mb-4 d-flex justify-content-between align-items-center">
+                        <div class="remember-me d-flex align-items-center">
                             <input type="checkbox" id="remember" name="remember" class="form-check-input">
-                            <label for="remember" class="form-check-label">Remember me</label>
+                            <label for="remember" class="form-check-label text-muted">Remember me</label>
                         </div>
-                        <a href="recover_password.php" class="text-decoration-none text-primary">Recover password</a>
+                        <a href="recover_password.php" class="text-decoration-none" style="color: #6B46C1;">Forgot password?</a>
                     </div>
-                    <div class="d-grid gap-2 mb-3">
+                    <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">Sign In</button>
                     </div>
                 </form>
             </div>
-            <div class="col-md-6 login-image d-none d-md-flex">
-                <img src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/svgfile.svg" alt="CRM Illustration" class="img-fluid" style="max-width: 80%; animation: float 3s ease-in-out infinite;">
+            <div class="col-lg-6 login-image d-none d-lg-block">
+                <div class="floating-shapes">
+                    <div class="shape"></div>
+                </div>
+                <div class="h-100 d-flex align-items-center justify-content-center">
+                    <img src="assets/login-illustration.svg" alt="CRM Illustration" class="img-fluid p-5" style="max-width: 100%; z-index: 1;">
+                </div>
             </div>
         </div>
     </div>
-    <style>
-        @keyframes float {
-            0% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-15px);
-            }
-
-            100% {
-                transform: translateY(0);
-            }
-        }
-    </style>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.getElementById('togglePassword').addEventListener('click', function() {
@@ -269,5 +252,4 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
         });
     </script>
 </body>
-
 </html>
