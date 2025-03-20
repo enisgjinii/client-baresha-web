@@ -16,6 +16,10 @@ if (!isset($_SESSION['user_id'])) {
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <!-- Favicon -->
+    <link rel="icon" href="img/brand-icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="img/brand-icon.png">
+    <link rel="shortcut icon" href="img/brand-icon.png" />
     <style>
         * {
 
