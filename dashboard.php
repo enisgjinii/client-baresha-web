@@ -3,7 +3,7 @@ include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
 
-$user_id = $_SESSION['user_id'];
+
 
 $sql_invoice_summary = "SELECT
     (SELECT COUNT(*) FROM invoices WHERE customer_id IN (SELECT id FROM klientet WHERE id = ?)) AS total_invoices,

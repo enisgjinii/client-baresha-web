@@ -155,7 +155,30 @@ $stmt->close();
                 <?php endif; ?>
             </div>
         </div>
+        <div class="card shadow-sm rounded slide-up mt-4">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="fas fa-shield-alt me-2"></i> Session Information</h6>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <strong class="text-info"><i class="fas fa-fingerprint me-1"></i> Session ID:</strong>
+                        <span class="ms-1"><?php echo session_id(); ?></span>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <strong class="text-info"><i class="fas fa-clock me-1"></i> Login Time:</strong>
+                        <span class="ms-1"><?php echo date('Y-m-d H:i:s', $_SESSION['login_time']); ?></span>
+                    </div>
+                    <div class="col-md-12 mb-2">
+                        <strong class="text-info"><i class="fas fa-key me-1"></i> JWT Token:</strong>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="<?php echo $_SESSION['jwt']; ?>" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyJWT()"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
     <?php include 'footer.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -313,3 +336,18 @@ $stmt->close();
 </body>
 
 </html>
+
+<script>
+    function copyJWT() {
+        const jwtInput = document.querySelector('input[value="<?php echo $_SESSION["jwt"]; ?>"]');
+        jwtInput.select();
+        document.execCommand('copy');
+        Toastify({
+            text: "JWT Token copied!",
+            duration: 3000,
+            gravity: "top",
+            position: "right",
+            backgroundColor: "#28a745"
+        }).showToast();
+    }
+</script>

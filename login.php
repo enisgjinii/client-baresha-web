@@ -1,10 +1,54 @@
 <?php
-session_set_cookie_params(3600);
+require_once 'vendor/autoload.php';
+use Firebase\JWT\JWT;
+
+// Set secure session parameters
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_samesite', 'Strict');
+session_set_cookie_params(3600, '/', null, true, true);
 session_start();
 
+// Initialize variables
 $error_message = "";
+$max_attempts = 5;
+$lockout_time = 900; // 15 minutes
+$ip_address = $_SERVER['REMOTE_ADDR'];
+
+// Generate CSRF token if not exists
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Check if IP is locked out
+$attempts_file = sys_get_temp_dir() . '/login_attempts.json';
+if (file_exists($attempts_file)) {
+    $attempts = json_decode(file_get_contents($attempts_file), true);
+} else {
+    $attempts = [];
+}
+
+if (isset($attempts[$ip_address])) {
+    if ($attempts[$ip_address]['count'] >= $max_attempts && 
+        time() - $attempts[$ip_address]['time'] < $lockout_time) {
+        $error_message = "Too many login attempts. Please try again later.";
+        header("Refresh: 3");
+        exit();
+    } elseif (time() - $attempts[$ip_address]['time'] >= $lockout_time) {
+        unset($attempts[$ip_address]);
+    }
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $error_message = "Invalid request";
+        $log_entry = date('Y-m-d H:i:s') . " - CSRF Attack detected from {$ip_address}\n";
+        file_put_contents('login_activity.log', $log_entry, FILE_APPEND);
+        header("Location: login.php");
+        exit();
+    }
     include 'connection.php';
     $perdoruesi = $conn->real_escape_string($_POST['perdoruesi']);
     $password = $_POST['password'];
@@ -16,15 +60,74 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $result = $stmt->get_result();
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
-            if (md5($password) === $user['fjalkalimi']) {
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_perdoruesi'] = $user['perdoruesi'];
-                $_SESSION['login_time'] = time();
-                header("Location: dashboard.php");
-                exit();
+            // Validate password strength
+if (strlen($password) < 8 || 
+    !preg_match("/[A-Z]/", $password) || 
+    !preg_match("/[a-z]/", $password) || 
+    !preg_match("/[0-9]/", $password)) {
+    $error_message = "Password must be at least 8 characters and contain uppercase, lowercase, and numbers";
+} elseif (password_verify($password, $user['fjalkalimi']) || md5($password) === $user['fjalkalimi']) {
+                // Store the new secure hash for future use
+                $new_hash = password_hash($password, PASSWORD_DEFAULT);
+                $update_sql = "UPDATE klientet SET fjalkalimi = ? WHERE id = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                if ($update_stmt) {
+                    $update_stmt->bind_param("si", $new_hash, $user['id']);
+                    $update_stmt->execute();
+                    $update_stmt->close();
+                }
+                // Generate JWT token
+$secret_key = "your_secret_key_here";
+$issued_at = time();
+$expiration = $issued_at + 3600; // Token expires in 1 hour
+
+$token_payload = [
+    'iat' => $issued_at,
+    'exp' => $expiration,
+    'user_id' => $user['id'],
+    'username' => $user['perdoruesi']
+];
+
+$jwt = JWT::encode($token_payload, $secret_key, 'HS256');
+
+// Set secure session variables
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['user_perdoruesi'] = $user['perdoruesi'];
+$_SESSION['login_time'] = time();
+$_SESSION['jwt'] = $jwt;
+
+// Log successful login
+$log_entry = date('Y-m-d H:i:s') . " - Successful login: {$user['perdoruesi']} from {$ip_address}\n";
+file_put_contents('login_activity.log', $log_entry, FILE_APPEND);
+
+// Clear login attempts for this IP
+if (isset($attempts[$ip_address])) {
+    unset($attempts[$ip_address]);
+    file_put_contents($attempts_file, json_encode($attempts));
+}
+
+header("Location: dashboard.php");
+exit();
             } else {
-                $error_message = "Invalid username or password";
-            }
+    // Log failed attempt
+    if (!isset($attempts[$ip_address])) {
+        $attempts[$ip_address] = [
+            'count' => 1,
+            'time' => time()
+        ];
+    } else {
+        $attempts[$ip_address]['count']++;
+        $attempts[$ip_address]['time'] = time();
+    }
+    file_put_contents($attempts_file, json_encode($attempts));
+    
+    $remaining_attempts = $max_attempts - $attempts[$ip_address]['count'];
+    $error_message = "Invalid username or password. {$remaining_attempts} attempts remaining.";
+    
+    // Log failed login attempt
+    $log_entry = date('Y-m-d H:i:s') . " - Failed login attempt for user: {$perdoruesi} from {$ip_address}\n";
+    file_put_contents('login_activity.log', $log_entry, FILE_APPEND);
+}
         } else {
             $error_message = "Invalid username or password";
         }
@@ -191,6 +294,7 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
                     </div>
                 <?php endif; ?>
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div class="mb-4">
                         <label for="perdoruesi" class="form-label text-muted mb-2">Username</label>
                         <div class="input-group">

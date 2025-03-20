@@ -1,8 +1,6 @@
 <?php
-session_start();
 $navItems = [
     ['title' => 'Dashboard', 'icon' => 'bi-speedometer2', 'url' => 'dashboard.php'],
-    ['title' => 'Calendar', 'icon' => 'bi-calendar-week', 'url' => 'calendar.php'],
     ['title' => 'Invoices', 'icon' => 'bi-receipt', 'url' => 'invoices.php'],
     ['title' => 'Reports', 'icon' => 'bi-bar-chart', 'url' => 'reports.php'],
     ['title' => 'Help Center', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
