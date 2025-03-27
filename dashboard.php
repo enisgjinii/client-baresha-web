@@ -3,8 +3,32 @@ include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
 
+// Verify session exists and user_id is available
+if (!isset($_SESSION['user_id'])) {
+    // Redirect to login page if no session exists
+    header("Location: login.php");
+    exit;
+}
 
+$user_id = $_SESSION['user_id'];
 
+// Set default timezone to ensure consistency
+date_default_timezone_set('Europe/Tirane');
+
+// Check database connection
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+// Get user information
+$sql_user_info = "SELECT emri, emriart FROM klientet WHERE id = ?";
+$stmt_user_info = $conn->prepare($sql_user_info);
+$stmt_user_info->bind_param("i", $user_id);
+$stmt_user_info->execute();
+$user_info_result = $stmt_user_info->get_result();
+$user_info = $user_info_result->fetch_assoc();
+
+// Continue with existing queries
 $sql_invoice_summary = "SELECT
     (SELECT COUNT(*) FROM invoices WHERE customer_id IN (SELECT id FROM klientet WHERE id = ?)) AS total_invoices,
     (SELECT COUNT(*) FROM invoices WHERE status = 'I papaguar' AND customer_id IN (SELECT id FROM klientet WHERE id = ?)) AS unpaid_invoices,
@@ -84,16 +108,20 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
     }
 
     .main-content {
-        padding: 2rem;
+        padding: 2rem 1rem; /* Adjusted padding for mobile */
+        transition: padding 0.3s ease;
     }
 
     .dashboard-card {
         background-color: #fff;
         border-radius: 12px;
         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         overflow: hidden;
         border: 1px solid #eef0f2;
+        height: 100%; /* Equal height cards */
+        display: flex;
+        flex-direction: column;
     }
 
     .dashboard-card:hover {
@@ -103,19 +131,22 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
     }
 
     .dashboard-card-header {
-        padding: 1.75rem 2rem;
+        padding: 1.5rem 1.5rem;
         background-color: #ffffff;
         border-bottom: 1px solid #eef0f2;
     }
 
     .dashboard-card-title {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 700;
         color: #3a4750;
     }
 
     .dashboard-card-body {
-        padding: 2rem;
+        padding: 1.5rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
     }
 
     .dashboard-summary-item {
@@ -211,19 +242,73 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             opacity: 1;
         }
     }
+    
+    /* Adding responsive media queries */
+    @media (max-width: 768px) {
+        .main-content {
+            padding: 1.5rem 0.75rem;
+        }
+        
+        .dashboard-card-header {
+            padding: 1.25rem;
+        }
+        
+        .dashboard-card-body {
+            padding: 1.25rem;
+        }
+        
+        .dashboard-summary-value {
+            font-size: 1.5rem;
+        }
+        
+        .chart-container {
+            height: 300px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .main-content {
+            padding: 1rem 0.5rem;
+        }
+        
+        .dashboard-card-title {
+            font-size: 1.1rem;
+        }
+        
+        .dashboard-summary-value {
+            font-size: 1.3rem;
+        }
+        
+        .dashboard-list-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .dashboard-payment-info {
+            align-items: flex-start;
+            margin-top: 0.5rem;
+        }
+        
+        .chart-container {
+            height: 250px;
+        }
+    }
 </style>
 
-<div class="col-md-10 main-content">
+<div class="col-md-10 col-sm-12 main-content">
     <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
         <div>
             <h2 class="fw-bold text-dark mb-2">Paneli Kryesor</h2>
-            <p class="text-muted mb-0">Analiza e të dhënave të biznesit tuaj.</p>
+            <p class="text-muted mb-0">Mirë se vini, <?php echo htmlspecialchars($user_info['emriart'] ?: $user_info['emri'] ?: 'Klient'); ?>. Analiza e të dhënave të biznesit tuaj.</p>
+        </div>
+        <div class="d-none d-md-block">
+            <p class="text-muted mb-0"><?php echo date("d F Y"); ?></p>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-4">
-            <div class="dashboard-card fade-in slide-up">
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div class="dashboard-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
                     <h5 class="dashboard-card-title">Përmbledhja e Faturave</h5>
                 </div>
@@ -248,13 +333,13 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
                         Mesatarja e Faturës
                         <span class="dashboard-summary-value"><?php echo htmlspecialchars(number_format($invoice_summary['average_invoice_amount'] ?: 0, 2)); ?></span>
                     </div>
-                    <a href="invoices.php" class="btn btn-outline-primary btn-sm mt-3">Detajet e Faturave <i class="fas fa-arrow-right ms-2"></i></a>
+                    <a href="invoices.php" class="btn btn-outline-primary btn-sm mt-auto">Detajet e Faturave <i class="fas fa-arrow-right ms-2"></i></a>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="dashboard-card fade-in slide-up">
+        <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+            <div class="dashboard-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
                     <h5 class="dashboard-card-title">Pagesat e Fundit</h5>
                 </div>
@@ -279,13 +364,13 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
                             <li>Nuk ka pagesa të fundit.</li>
                         <?php endif; ?>
                     </ul>
-                    <a href="payments.php" class="btn btn-outline-secondary btn-sm mt-3">Shiko Pagesat <i class="fas fa-arrow-right ms-2"></i></a>
+                    <a href="payments.php" class="btn btn-outline-secondary btn-sm mt-auto">Shiko Pagesat <i class="fas fa-arrow-right ms-2"></i></a>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="dashboard-card fade-in slide-up">
+        <div class="col-lg-4 col-md-12 col-sm-12 mb-4">
+            <div class="dashboard-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
                     <h5 class="dashboard-card-title">Kontratat e Fundit të Këngëve</h5>
                 </div>
@@ -306,61 +391,96 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
                             <li>Nuk ka kontrata të fundit të këngëve.</li>
                         <?php endif; ?>
                     </ul>
-                    <a href="song-contract.php" class="btn btn-outline-info btn-sm mt-3">Shiko Kontratat <i class="fas fa-arrow-right ms-2"></i></a>
+                    <a href="song-contract.php" class="btn btn-outline-info btn-sm mt-auto">Shiko Kontratat <i class="fas fa-arrow-right ms-2"></i></a>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="dashboard-card chart-card fade-in slide-up">
+        <div class="col-lg-6 col-md-12 mb-4">
+            <div class="dashboard-card chart-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
                     <h5 class="dashboard-card-title">Statusi i Faturave</h5>
                 </div>
                 <div class="dashboard-card-body">
-                    <div id="invoiceStatusChart"></div>
+                    <div id="invoiceStatusChart" class="chart-container"></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="dashboard-card chart-card fade-in slide-up">
+        <div class="col-lg-6 col-md-12 mb-4">
+            <div class="dashboard-card chart-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
                     <h5 class="dashboard-card-title">Llojet e Pagesave</h5>
                 </div>
                 <div class="dashboard-card-body">
-                    <div id="paymentTypeChart"></div>
+                    <div id="paymentTypeChart" class="chart-container"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Error handling section that only appears when there's an error -->
+    <div id="errorContainer" class="alert alert-danger d-none" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span id="errorMessage"></span>
+    </div>
+
 </div>
 
 <?php include 'footer.php'; ?>
-<script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
+<script src="https://kit.fontawesome.com/de9f35a91c.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
+    // Function to handle errors
+    function showError(message) {
+        const errorContainer = document.getElementById('errorContainer');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        errorMessage.textContent = message;
+        errorContainer.classList.remove('d-none');
+        
+        setTimeout(() => {
+            errorContainer.classList.add('d-none');
+        }, 5000);
+    }
+
+    // Function to handle chart responsiveness
+    function updateChartDimensions() {
+        if (invoiceStatusChart && paymentTypeChart) {
+            invoiceStatusChart.render();
+            paymentTypeChart.render();
+        }
+    }
+
+    // Listen for window resize events
+    window.addEventListener('resize', updateChartDimensions);
+
+    // Chart options with improved responsiveness
     var invoiceStatusOptions = {
         chart: {
             type: 'pie',
-            height: 350,
+            height: '100%',
             toolbar: {
                 show: false
-            }
+            },
+            redrawOnWindowResize: true,
+            redrawOnParentResize: true
         },
-        series: <?php echo json_encode($invoice_status_series); ?>,
-        labels: <?php echo json_encode($invoice_status_labels); ?>,
+        series: <?php echo json_encode($invoice_status_series ?: []); ?>,
+        labels: <?php echo json_encode($invoice_status_labels ?: []); ?>,
         legend: {
             position: 'bottom',
             fontFamily: 'Nunito',
             fontSize: '14px',
             itemMargin: {
                 vertical: 8
-            }
+            },
+            horizontalAlign: 'center'
         },
         colors: ['#5482f4', '#49b382', '#ffab00', '#f4516c', '#07a081'],
         tooltip: {
+            enabled: true,
             y: {
                 formatter: function(value) {
                     return value + " fatura"
@@ -374,6 +494,7 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             pie: {
                 expandOnClick: true,
                 donut: {
+                    size: '65%',
                     labels: {
                         show: true,
                         name: {
@@ -404,40 +525,85 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             }
         },
         responsive: [{
-            breakpoint: 480,
+            breakpoint: 992,
             options: {
                 chart: {
-                    width: 200
+                    height: 380
                 },
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    horizontalAlign: 'center'
+                }
+            }
+        },
+        {
+            breakpoint: 576,
+            options: {
+                chart: {
+                    height: 320
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            labels: {
+                                name: {
+                                    fontSize: '13px'
+                                },
+                                value: {
+                                    fontSize: '18px'
+                                },
+                                total: {
+                                    fontSize: '15px'
+                                }
+                            }
+                        }
+                    }
+                },
+                legend: {
+                    fontSize: '12px',
+                    itemMargin: {
+                        vertical: 5,
+                        horizontal: 2
+                    }
                 }
             }
         }]
     };
-    var invoiceStatusChart = new ApexCharts(document.querySelector("#invoiceStatusChart"), invoiceStatusOptions);
-    invoiceStatusChart.render();
+    
+    // Create charts with error handling
+    try {
+        var invoiceStatusChart = new ApexCharts(document.querySelector("#invoiceStatusChart"), invoiceStatusOptions);
+        invoiceStatusChart.render();
+    } catch (error) {
+        console.error("Error rendering invoice status chart:", error);
+        showError("Pati një problem në shfaqjen e grafikut të statusit të faturave.");
+    }
 
     var paymentTypeOptions = {
+        // Similar responsive updates to the payment type chart
         chart: {
             type: 'pie',
-            height: 350,
+            height: '100%',
             toolbar: {
                 show: false
-            }
+            },
+            redrawOnWindowResize: true,
+            redrawOnParentResize: true
         },
-        series: <?php echo json_encode($payment_type_series); ?>,
-        labels: <?php echo json_encode($payment_type_labels); ?>,
+        series: <?php echo json_encode($payment_type_series ?: []); ?>,
+        labels: <?php echo json_encode($payment_type_labels ?: []); ?>,
         legend: {
             position: 'bottom',
             fontFamily: 'Nunito',
             fontSize: '14px',
             itemMargin: {
                 vertical: 8
-            }
+            },
+            horizontalAlign: 'center'
         },
         colors: ['#ffab00', '#a370f7', '#49b382', '#5482f4', '#f4516c'],
         tooltip: {
+            enabled: true,
             y: {
                 formatter: function(value) {
                     return value + " pagesa"
@@ -449,17 +615,21 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
         },
         plotOptions: {
             pie: {
+                expandOnClick: true,
                 donut: {
+                    size: '65%',
                     labels: {
                         show: true,
                         name: {
                             fontSize: '15px',
                             fontFamily: 'Nunito',
+                            color: undefined,
                             offsetY: -10
                         },
                         value: {
                             fontSize: '22px',
                             fontFamily: 'Nunito',
+                            color: undefined,
                             offsetY: 16,
                             formatter: function(val) {
                                 return val
@@ -478,17 +648,61 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             }
         },
         responsive: [{
-            breakpoint: 480,
+            breakpoint: 992,
             options: {
                 chart: {
-                    width: 200
+                    height: 380
                 },
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    horizontalAlign: 'center'
+                }
+            }
+        },
+        {
+            breakpoint: 576,
+            options: {
+                chart: {
+                    height: 320
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            labels: {
+                                name: {
+                                    fontSize: '13px'
+                                },
+                                value: {
+                                    fontSize: '18px'
+                                },
+                                total: {
+                                    fontSize: '15px'
+                                }
+                            }
+                        }
+                    }
+                },
+                legend: {
+                    fontSize: '12px',
+                    itemMargin: {
+                        vertical: 5,
+                        horizontal: 2
+                    }
                 }
             }
         }]
     };
-    var paymentTypeChart = new ApexCharts(document.querySelector("#paymentTypeChart"), paymentTypeOptions);
-    paymentTypeChart.render();
+
+    try {
+        var paymentTypeChart = new ApexCharts(document.querySelector("#paymentTypeChart"), paymentTypeOptions);
+        paymentTypeChart.render();
+    } catch (error) {
+        console.error("Error rendering payment type chart:", error);
+        showError("Pati një problem në shfaqjen e grafikut të llojeve të pagesave.");
+    }
+
+    // Initial chart dimensions update
+    document.addEventListener("DOMContentLoaded", function() {
+        updateChartDimensions();
+    });
 </script>

@@ -66,7 +66,7 @@ if (strlen($password) < 8 ||
     !preg_match("/[a-z]/", $password) || 
     !preg_match("/[0-9]/", $password)) {
     $error_message = "Password must be at least 8 characters and contain uppercase, lowercase, and numbers";
-} elseif (password_verify($password, $user['fjalkalimi']) || md5($password) === $user['fjalkalimi']) {
+} elseif (md5($password, $user['fjalkalimi']) || md5($password) === $user['fjalkalimi']) {
                 // Store the new secure hash for future use
                 $new_hash = password_hash($password, PASSWORD_DEFAULT);
                 $update_sql = "UPDATE klientet SET fjalkalimi = ? WHERE id = ?";
