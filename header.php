@@ -1,121 +1,155 @@
 <?php
+// Start session with secure parameters
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.use_only_cookies', 1);
+ini_set('session.cookie_samesite', 'Strict');
+session_set_cookie_params(3600, '/', null, true, true);
 session_start();
-$user_id = $_SESSION['user_id'];
 
+// Security check
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
-} ?>
+}
+
+// Session validation
+if (isset($_SESSION['last_ip']) && $_SESSION['last_ip'] !== $_SERVER['REMOTE_ADDR']) {
+    session_unset();
+    session_destroy();
+    header("Location: login.php?error=security");
+    exit;
+}
+
+$_SESSION['last_ip'] = $_SERVER['REMOTE_ADDR'];
+$user_id = $_SESSION['user_id'];
+
+// Security headers
+header("X-Frame-Options: DENY");
+header("X-XSS-Protection: 1; mode=block");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://stackpath.bootstrapcdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data:;");
+?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>betaCRM</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Baresha Network CRM">
+    <meta name="color-scheme" content="light dark">
+    <title>bareshaNetwork</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
-    <!-- Favicon -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel="icon" href="img/brand-icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="img/brand-icon.png">
-    <link rel="shortcut icon" href="img/brand-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        * {
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --sidebar-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --card-border: #e9ecef;
+            --link-color: #495057;
+            --link-hover-bg: #e9ecef;
+            --link-active-bg: #e0f7fa;
+            --link-active-color: #0b7285;
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --border-color: #2a2a2a;
+            --sidebar-bg: #1a1a1a;
+            --card-bg: #1e1e1e;
+            --card-border: #2a2a2a;
+            --link-color: #adb5bd;
+            --link-hover-bg: #2a2a2a;
+            --link-active-bg: #2a2a2a;
+            --link-active-color: #6ea8fe;
+            --input-bg: #2c2c2c;
+            --input-border: #444444;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+        }
 
-            font-family: "Lato", sans-serif;
-            font-weight: 400;
-            font-style: normal;
+        * {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            background-color: #f8f9fa;
-        }
-
-        .sidebar {
-            background-color: white;
-            min-height: 100vh;
-            border-right: 1px solid #e9ecef;
-        }
-
-        .sidebar .nav-link {
-            color: #6c757d;
-            padding: 0.8rem 1rem;
-            border-radius: 0.25rem;
-            margin: 0.2rem 0;
-        }
-
-        .sidebar .nav-link.active {
-            background-color: #e6f0ff;
-            color: #0d6efd;
-        }
-
-        .main-content {
-            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
 
         .card {
-            border-radius: 10px;
-            border: 1px solid #e9ecef;
-            margin-bottom: 20px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            box-shadow: 0 2px 4px var(--shadow-color);
         }
 
-        .metric-icon {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
+        .main-content {
+            padding: 15px;
         }
 
-
-
-        .product-img {
-            width: 40px;
-            height: 40px;
-            background-color: #f8f9fa;
-        }
-
-        .badge-shipped {
-            background-color: #e6f0ff;
-            color: #0d6efd;
-        }
-
-        .badge-processing {
-            background-color: #fff8e6;
-            color: #fd7e14;
-        }
-
-        .badge-cancelled {
-            background-color: #ffe6e6;
-            color: #dc3545;
-        }
-
-        .avatar {
-            width: 32px;
-            height: 32px;
+        input, select, textarea, .form-control {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border-color: var(--input-border);
+            font-size: 0.9rem;
             border-radius: 4px;
-            background-color: #f8f9fa;
+        }
+        
+        .form-control:focus {
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+        
+        .btn {
+            font-size: 0.9rem;
+            border-radius: 4px;
+            padding: 0.375rem 0.75rem;
         }
 
-        .pagination .page-link {
-            color: #6c757d;
+        table {
+            font-size: 0.85rem;
+            color: var(--text-color);
         }
-
-        .pagination .page-item.active .page-link {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-            color: white;
+        
+        .table th {
+            border-top: none;
+            font-weight: 500;
         }
     </style>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/af-2.7.0/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/cr-2.0.4/date-1.5.5/fc-5.0.4/fh-4.0.1/kt-2.12.1/r-3.0.4/rg-1.5.1/rr-1.5.0/sc-2.4.3/sb-1.8.2/sp-2.3.3/sl-3.0.0/sr-1.4.1/datatables.min.css" rel="stylesheet" integrity="sha384-u4lA6l+7hbl4AEP7E3BuFQZ8+SF5YlUkETNubbdv5971U72pecvgyyCjNLPeO+lL" crossorigin="anonymous">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+    <script>
+    // Apply theme on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme-mode') || 'system';
+        
+        if (savedTheme === 'system') {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        } else {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+    });
+    </script>
 </head>
-
 <body>
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
