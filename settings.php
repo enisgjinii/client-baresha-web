@@ -6,8 +6,9 @@ $user_id = $_SESSION['user_id'];
 $toastMessage = "";
 $toastColor = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $perdoruesi = isset($_POST['perdoruesi']) ? $_POST['perdoruesi'] : "";
+    $perdoruesi = isset($_POST['perdoruesi']) ? trim($_POST['perdoruesi']) : "";
     $fjalkalimi = isset($_POST['fjalkalimi']) ? trim($_POST['fjalkalimi']) : "";
+    
     if (empty($perdoruesi)) {
         $toastMessage = "Përdoruesi është i domosdoshëm.";
         $toastColor = "#dc3545";
@@ -30,22 +31,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $stmt->close();
             }
         } else {
-            $hashed = md5($fjalkalimi);
-            $sqlUpdate = "UPDATE klientet SET perdoruesi=?, fjalkalimi=? WHERE id=?";
-            $stmt = $conn->prepare($sqlUpdate);
-            if (!$stmt) {
-                $toastMessage = "Gabim gjatë përgatitjes së përditësimit.";
+            // Validate password strength
+            if (strlen($fjalkalimi) < 8 || 
+                !preg_match("/[A-Z]/", $fjalkalimi) || 
+                !preg_match("/[a-z]/", $fjalkalimi) || 
+                !preg_match("/[0-9]/", $fjalkalimi)) {
+                $toastMessage = "Fjalëkalimi duhet të jetë të paktën 8 karaktere dhe të përmbajë shkronja të mëdha, të vogla dhe numra.";
                 $toastColor = "#dc3545";
             } else {
-                $stmt->bind_param("ssi", $perdoruesi, $hashed, $user_id);
-                if ($stmt->execute()) {
-                    $toastMessage = "Përdoruesi dhe fjalëkalimi u përditësuan me sukses.";
-                    $toastColor = "#28a745";
-                } else {
-                    $toastMessage = "Gabim gjatë përditësimit të të dhënave.";
+                $hashed = password_hash($fjalkalimi, PASSWORD_DEFAULT);
+                $sqlUpdate = "UPDATE klientet SET perdoruesi=?, fjalkalimi=? WHERE id=?";
+                $stmt = $conn->prepare($sqlUpdate);
+                if (!$stmt) {
+                    $toastMessage = "Gabim gjatë përgatitjes së përditësimit.";
                     $toastColor = "#dc3545";
+                } else {
+                    $stmt->bind_param("ssi", $perdoruesi, $hashed, $user_id);
+                    if ($stmt->execute()) {
+                        $toastMessage = "Përdoruesi dhe fjalëkalimi u përditësuan me sukses.";
+                        $toastColor = "#28a745";
+                    } else {
+                        $toastMessage = "Gabim gjatë përditësimit të të dhënave.";
+                        $toastColor = "#dc3545";
+                    }
+                    $stmt->close();
                 }
-                $stmt->close();
             }
         }
     }
