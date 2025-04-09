@@ -1,0 +1,1 @@
+[09-Apr-2025 14:08:44 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\client-baresha-web\get_csv_data.php on line 26

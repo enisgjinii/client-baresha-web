@@ -6,6 +6,7 @@ $navItems = [
     ['title' => 'Help Center', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
     ['title' => 'General Contract', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
     ['title' => 'Song Contract', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
+    ['title' => 'CSV Income', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentUserName = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : "User";
