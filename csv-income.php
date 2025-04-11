@@ -81,10 +81,20 @@ class CSVData {
             'Belgium' => 'be',
             'Switzerland' => 'ch',
             'Austria' => 'at',
-            // Add more as needed
+            // Add more mappings as needed
         ];
-        
-        return isset($countryMap[$this->country]) ? $countryMap[$this->country] : 'globe';
+
+        $countryCode = isset($countryMap[$this->country]) ? $countryMap[$this->country] : null;
+
+        // Fallback logic for missing or invalid country codes
+        if (!$countryCode) {
+            $countryCode = strtolower(substr($this->country, 0, 2)); // Try using the first two letters
+            if (!preg_match('/^[a-z]{2}$/', $countryCode)) {
+                $countryCode = 'globe'; // Default to globe if invalid
+            }
+        }
+
+        return $countryCode;
     }
 }
 
