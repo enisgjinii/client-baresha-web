@@ -2,24 +2,19 @@
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
-
 // Verify session exists and user_id is available
 if (!isset($_SESSION['user_id'])) {
     // Redirect to login page if no session exists
     header("Location: login.php");
     exit;
 }
-
 $user_id = $_SESSION['user_id'];
-
 // Set default timezone to ensure consistency
 date_default_timezone_set('Europe/Tirane');
-
 // Check database connection
 if (!$conn) {
     die("Connection failed: " . mysqli_connect_error());
 }
-
 // Get user information
 $sql_user_info = "SELECT emri, emriart FROM klientet WHERE id = ?";
 $stmt_user_info = $conn->prepare($sql_user_info);
@@ -27,7 +22,6 @@ $stmt_user_info->bind_param("i", $user_id);
 $stmt_user_info->execute();
 $user_info_result = $stmt_user_info->get_result();
 $user_info = $user_info_result->fetch_assoc();
-
 // Continue with existing queries
 $sql_invoice_summary = "SELECT
     (SELECT COUNT(*) FROM invoices WHERE customer_id IN (SELECT id FROM klientet WHERE id = ?)) AS total_invoices,
@@ -36,42 +30,35 @@ $sql_invoice_summary = "SELECT
     (SELECT SUM(paid_amount) FROM invoices WHERE customer_id IN (SELECT id FROM klientet WHERE id = ?)) AS total_paid_amount,
     (SELECT AVG(total_amount) FROM invoices WHERE customer_id IN (SELECT id FROM klientet WHERE id = ?) ) AS average_invoice_amount
 ";
-
 $stmt_invoice_summary = $conn->prepare($sql_invoice_summary);
 $stmt_invoice_summary->bind_param("iiiii", $user_id, $user_id, $user_id, $user_id, $user_id);
 $stmt_invoice_summary->execute();
 $invoice_summary_result = $stmt_invoice_summary->get_result();
 $invoice_summary = $invoice_summary_result->fetch_assoc();
-
 $sql_recent_payments = "SELECT p.payment_id, p.payment_amount, p.payment_date, i.invoice_number, i.total_amount AS invoice_total, i.status AS invoice_status
                            FROM payments p
                            JOIN invoices i ON p.invoice_id = i.id
                            WHERE i.customer_id IN (SELECT id FROM klientet WHERE id = ?)
                            ORDER BY p.payment_date DESC
                            LIMIT 5";
-
 $stmt_recent_payments = $conn->prepare($sql_recent_payments);
 $stmt_recent_payments->bind_param("i", $user_id);
 $stmt_recent_payments->execute();
 $recent_payments_result = $stmt_recent_payments->get_result();
-
 $sql_recent_song_contracts = "SELECT knt.id, knt.vepra, k.emriart AS klient_emriart, knt.data AS contract_date
                             FROM kontrata knt
                             LEFT JOIN klientet k ON knt.klienti = k.emri
                             WHERE k.id = ?
                             ORDER BY knt.data DESC
                             LIMIT 5";
-
 $stmt_recent_song_contracts = $conn->prepare($sql_recent_song_contracts);
 $stmt_recent_song_contracts->bind_param("i", $user_id);
 $stmt_recent_song_contracts->execute();
 $recent_song_contracts_result = $stmt_recent_song_contracts->get_result();
-
 $sql_invoice_status_chart = "SELECT status, COUNT(*) as count
                              FROM invoices
                              WHERE customer_id IN (SELECT id FROM klientet WHERE id = ?)
                              GROUP BY status";
-
 $stmt_invoice_status_chart = $conn->prepare($sql_invoice_status_chart);
 $stmt_invoice_status_chart->bind_param("i", $user_id);
 $stmt_invoice_status_chart->execute();
@@ -82,13 +69,11 @@ while ($row = $invoice_status_chart_result->fetch_assoc()) {
     $invoice_status_labels[] = $row['status'];
     $invoice_status_series[] = $row['count'];
 }
-
 $sql_payment_type_chart = "SELECT type_of_pay, COUNT(*) as count
                             FROM payments p
                             JOIN invoices i ON p.invoice_id = i.id
                             WHERE i.customer_id IN (SELECT id FROM klientet WHERE id = ?)
                             GROUP BY type_of_pay";
-
 $stmt_payment_type_chart = $conn->prepare($sql_payment_type_chart);
 $stmt_payment_type_chart->bind_param("i", $user_id);
 $stmt_payment_type_chart->execute();
@@ -99,19 +84,16 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
     $payment_type_labels[] = $row['type_of_pay'];
     $payment_type_series[] = $row['count'];
 }
-
 ?>
 <style>
     body {
         background-color: #f3f7fa;
         font-family: 'Nunito', sans-serif;
     }
-
     .main-content {
         padding: 2rem 1rem; /* Adjusted padding for mobile */
         transition: padding 0.3s ease;
     }
-
     .dashboard-card {
         background-color: #fff;
         border-radius: 12px;
@@ -123,37 +105,31 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
         display: flex;
         flex-direction: column;
     }
-
     .dashboard-card:hover {
         box-shadow: 0 7px 25px rgba(0, 0, 0, 0.07);
         transform: translateY(-2px);
         transition: all 0.3s ease;
     }
-
     .dashboard-card-header {
         padding: 1.5rem 1.5rem;
         background-color: #ffffff;
         border-bottom: 1px solid #eef0f2;
     }
-
     .dashboard-card-title {
         font-size: 1.25rem;
         font-weight: 700;
         color: #3a4750;
     }
-
     .dashboard-card-body {
         padding: 1.5rem;
         flex: 1;
         display: flex;
         flex-direction: column;
     }
-
     .dashboard-summary-item {
         margin-bottom: 1.2rem;
         color: #6e7a82;
     }
-
     .dashboard-summary-value {
         font-size: 2rem;
         font-weight: 800;
@@ -161,12 +137,10 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
         display: block;
         margin-top: 0.3rem;
     }
-
     .dashboard-list {
         list-style: none;
         padding-left: 0;
     }
-
     .dashboard-list-item {
         padding: 1rem 0;
         border-bottom: 1px solid #edf2f7;
@@ -174,127 +148,102 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
         justify-content: space-between;
         align-items: center;
     }
-
     .dashboard-list-item:last-child {
         border-bottom: none;
     }
-
     .dashboard-event-date {
         font-style: italic;
         color: #a0aab4;
         margin-left: 1.2rem;
     }
-
     .dashboard-payment-info {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
     }
-
     .dashboard-payment-amount {
         font-weight: 700;
         color: #49b382;
         font-size: 1.1rem;
     }
-
     .dashboard-invoice-link {
         color: #5482f4;
         font-weight: 500;
     }
-
     #invoiceStatusChart,
     #paymentTypeChart {
         width: 100%;
         height: 350px;
         margin-top: 1rem;
     }
-
     .chart-card .dashboard-card-body {
         padding: 1rem;
     }
-
     .fade-in {
         animation: fadeIn ease 0.5s;
     }
-
     .slide-up {
         animation: slideUp ease 0.5s;
     }
-
     @keyframes fadeIn {
         0% {
             opacity: 0;
         }
-
         100% {
             opacity: 1;
         }
     }
-
     @keyframes slideUp {
         0% {
             transform: translateY(30px);
             opacity: 0;
         }
-
         100% {
             transform: translateY(0);
             opacity: 1;
         }
     }
-    
     /* Adding responsive media queries */
     @media (max-width: 768px) {
         .main-content {
             padding: 1.5rem 0.75rem;
         }
-        
         .dashboard-card-header {
             padding: 1.25rem;
         }
-        
         .dashboard-card-body {
             padding: 1.25rem;
         }
-        
         .dashboard-summary-value {
             font-size: 1.5rem;
         }
-        
         .chart-container {
             height: 300px;
         }
     }
-    
     @media (max-width: 576px) {
         .main-content {
             padding: 1rem 0.5rem;
         }
-        
         .dashboard-card-title {
             font-size: 1.1rem;
         }
-        
         .dashboard-summary-value {
             font-size: 1.3rem;
         }
-        
         .dashboard-list-item {
             flex-direction: column;
             align-items: flex-start;
         }
-        
         .dashboard-payment-info {
             align-items: flex-start;
             margin-top: 0.5rem;
         }
-        
         .chart-container {
             height: 250px;
         }
     }
 </style>
-
 <div class="col-md-10 col-sm-12 main-content">
     <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
         <div>
@@ -305,7 +254,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             <p class="text-muted mb-0"><?php echo date("d F Y"); ?></p>
         </div>
     </div>
-
     <div class="row">
         <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
             <div class="dashboard-card fade-in slide-up h-100">
@@ -337,7 +285,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
                 </div>
             </div>
         </div>
-
         <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
             <div class="dashboard-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
@@ -368,7 +315,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
                 </div>
             </div>
         </div>
-
         <div class="col-lg-4 col-md-12 col-sm-12 mb-4">
             <div class="dashboard-card fade-in slide-up h-100">
                 <div class="dashboard-card-header">
@@ -396,7 +342,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             </div>
         </div>
     </div>
-
     <div class="row">
         <div class="col-lg-6 col-md-12 mb-4">
             <div class="dashboard-card chart-card fade-in slide-up h-100">
@@ -419,15 +364,12 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             </div>
         </div>
     </div>
-
     <!-- Error handling section that only appears when there's an error -->
     <div id="errorContainer" class="alert alert-danger d-none" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
         <span id="errorMessage"></span>
     </div>
-
 </div>
-
 <?php include 'footer.php'; ?>
 <script src="https://kit.fontawesome.com/de9f35a91c.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -436,15 +378,12 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
     function showError(message) {
         const errorContainer = document.getElementById('errorContainer');
         const errorMessage = document.getElementById('errorMessage');
-        
         errorMessage.textContent = message;
         errorContainer.classList.remove('d-none');
-        
         setTimeout(() => {
             errorContainer.classList.add('d-none');
         }, 5000);
     }
-
     // Function to handle chart responsiveness
     function updateChartDimensions() {
         if (invoiceStatusChart && paymentTypeChart) {
@@ -452,10 +391,8 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             paymentTypeChart.render();
         }
     }
-
     // Listen for window resize events
     window.addEventListener('resize', updateChartDimensions);
-
     // Chart options with improved responsiveness
     var invoiceStatusOptions = {
         chart: {
@@ -569,7 +506,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             }
         }]
     };
-    
     // Create charts with error handling
     try {
         var invoiceStatusChart = new ApexCharts(document.querySelector("#invoiceStatusChart"), invoiceStatusOptions);
@@ -578,7 +514,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
         console.error("Error rendering invoice status chart:", error);
         showError("Pati një problem në shfaqjen e grafikut të statusit të faturave.");
     }
-
     var paymentTypeOptions = {
         // Similar responsive updates to the payment type chart
         chart: {
@@ -692,7 +627,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
             }
         }]
     };
-
     try {
         var paymentTypeChart = new ApexCharts(document.querySelector("#paymentTypeChart"), paymentTypeOptions);
         paymentTypeChart.render();
@@ -700,7 +634,6 @@ while ($row = $payment_type_chart_result->fetch_assoc()) {
         console.error("Error rendering payment type chart:", error);
         showError("Pati një problem në shfaqjen e grafikut të llojeve të pagesave.");
     }
-
     // Initial chart dimensions update
     document.addEventListener("DOMContentLoaded", function() {
         updateChartDimensions();
