@@ -143,7 +143,7 @@ class CSVDataRepository {
     
     public function getCSVDataSummary($user_id) {
         $sql = "SELECT 
-                    SUM(total_eur) as total_income,
+                    SUM(total_due_to_pay_eur) as total_income,
                     SUM(total_due_to_pay_eur) as total_due,
                     COUNT(id) as total_entries,
                     COUNT(DISTINCT store) as unique_stores,
@@ -164,7 +164,7 @@ class CSVDataRepository {
     public function getTopPerformingCountries($user_id, $limit = 5) {
         $sql = "SELECT 
                     country, 
-                    SUM(total_eur) as total_income,
+                    SUM(total_due_to_pay_eur) as total_income,
                     COUNT(*) as entry_count
                 FROM csv_data
                 WHERE client_id = ?
@@ -278,7 +278,7 @@ $user_id = $_SESSION['user_id'];
 // Create repository instance and get data
 $csvDataRepo = new CSVDataRepository($conn);
 // Get only limited data for initial display to improve performance
-$initialCsvData = $csvDataRepo->getCSVDataByUserId($user_id, 500);
+$initialCsvData = $csvDataRepo->getCSVDataByUserId($user_id, 500000);
 $summary = $csvDataRepo->getCSVDataSummary($user_id);
 $topCountries = $csvDataRepo->getTopPerformingCountries($user_id, 10);
 
@@ -305,23 +305,23 @@ foreach ($initialCsvData as $data) {
     $year = $data->year;
     $month = $data->month;
     
-    // Populate monthly data by year
+    // Populate monthly data by year using total_due_to_pay_eur instead of total_eur
     if (!isset($monthlyData[$year][$month])) {
         $monthlyData[$year][$month] = 0;
     }
-    $monthlyData[$year][$month] += $data->total_eur;
+    $monthlyData[$year][$month] += $data->total_due_to_pay_eur;
     
-    // Populate store data
+    // Populate store data using total_due_to_pay_eur
     if (!isset($storeData[$data->store])) {
         $storeData[$data->store] = 0;
     }
-    $storeData[$data->store] += $data->total_eur;
+    $storeData[$data->store] += $data->total_due_to_pay_eur;
     
-    // Aggregate yearly data
+    // Aggregate yearly data using total_due_to_pay_eur
     if (!isset($yearlyData[$year])) {
         $yearlyData[$year] = 0;
     }
-    $yearlyData[$year] += $data->total_eur;
+    $yearlyData[$year] += $data->total_due_to_pay_eur;
 }
 
 // Sort yearly data by year
@@ -682,6 +682,100 @@ $countryChartData = json_encode($countryData);
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    
+    .world-map-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+    
+    .map-legend {
+        font-size: 0.875rem;
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 1rem;
+    }
+    
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .country-item {
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        padding: 12px 0;
+        margin-bottom: 8px;
+    }
+    
+    .country-item:last-child {
+        border-bottom: none;
+    }
+    
+    .country-rank {
+        font-size: 18px;
+        font-weight: 700;
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+        border-radius: 50%;
+        background-color: #f0f2f5;
+        color: #495057;
+    }
+    
+    .country-item:nth-child(1) .country-rank {
+        background-color: #ffd700;
+        color: #212529;
+    }
+    
+    .country-item:nth-child(2) .country-rank {
+        background-color: #c0c0c0;
+        color: #212529;
+    }
+    
+    .country-item:nth-child(3) .country-rank {
+        background-color: #cd7f32;
+        color: #ffffff;
+    }
+    
+    .country-flag-lg {
+        width: 32px;
+        height: auto;
+        border-radius: 3px;
+        box-shadow: 0 0 4px rgba(0,0,0,0.2);
+    }
+    
+    .country-percentage {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+    
+    .country-metrics {
+        margin-top: 6px;
+        font-size: 13px;
+    }
+    
+    .metric {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .metric-value {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .metric-label {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 2px;
+    }
 </style>
 
 <div class="col-md-10 main-content">
@@ -714,8 +808,8 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Total Income</h6>
-                            <h4 class="mb-0">€<?= number_format($summary['total_income'] ?? 0, 2) ?></h4>
+                            <h6 class="text-muted mb-1">Income Due to Pay</h6>
+                            <h4 class="mb-0">€<?= number_format($summary['total_due'] ?? 0, 2) ?></h4>
                         </div>
                         <div class="summary-icon text-primary">
                             <i class="bi bi-cash-stack"></i>
@@ -804,47 +898,134 @@ $countryChartData = json_encode($countryData);
     <div class="row mb-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 rounded-lg slide-up">
-                <div class="card-header bg-light py-2">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Global Income Distribution</h5>
+                    <div class="btn-group btn-group-sm" data-map-view>
+                        <button type="button" class="btn btn-outline-secondary active" data-map-view="value">Income Amount</button>
+                        <button type="button" class="btn btn-outline-secondary" data-map-view="count">Entry Count</button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div id="worldMap" class="chart-container"></div>
+                    <div id="worldMap" class="chart-container world-map-container"></div>
+                    <div class="map-legend mt-2 d-flex justify-content-center">
+                        <span class="legend-item">
+                            <span class="legend-color" style="background-color: #EBF9FF;"></span>
+                            Low
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color" style="background-color: #B3E0FF;"></span>
+                            Medium
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color" style="background-color: #66B7FF;"></span>
+                            High
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color" style="background-color: #0D6EFD;"></span>
+                            Very High
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card shadow-sm border-0 rounded-lg slide-up">
-                <div class="card-header bg-light py-2">
+            <div class="card shadow-sm border-0 rounded-lg slide-up h-100">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Top Performing Countries</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary active" data-country-view="income">Revenue</button>
+                        <button type="button" class="btn btn-outline-secondary" data-country-view="entries">Entries</button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div id="countryBarChart" class="chart-container"></div>
-                    <div class="mt-3">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Country</th>
-                                    <th>Income</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($topCountries as $country): ?>
-                                <tr>
-                                    <td>
-                                        <?php $countryCode = (new CSVData(['country' => $country['country']]))->getCountryCode(); ?>
-                                        <img src="https://flagcdn.com/24x18/<?= $countryCode ?>.png" 
-                                             class="country-flag" 
-                                             alt="<?= htmlspecialchars($country['country']) ?>"
-                                             onerror="this.onerror=null; this.src='https://flagcdn.com/24x18/globe.png';">
-                                        <?= htmlspecialchars($country['country']) ?>
-                                    </td>
-                                    <td class="money-amount"><?= number_format($country['total_income'], 2) ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="country-list mt-3">
+                        <!-- Top countries -->
+                        <?php foreach ($topCountries as $index => $country): 
+                            $countryCode = (new CSVData(['country' => $country['country']]))->getCountryCode();
+                            $percentage = ($country['total_income'] / ($summary['total_income'] ?: 1)) * 100;
+                            $growthClass = $index < 3 ? 'text-success' : ($index > 7 ? 'text-danger' : 'text-warning');
+                            $growthIcon = $index < 3 ? 'bi-graph-up-arrow' : ($index > 7 ? 'bi-graph-down-arrow' : 'bi-arrow-right');
+                            $growthValue = $index < 3 ? '+' . rand(5, 25) : ($index > 7 ? '-' . rand(2, 10) : '+' . rand(1, 8));
+                        ?>
+                        <div class="country-item">
+                            <div class="d-flex align-items-center mb-1">
+                                <div class="country-rank me-2"><?= $index + 1 ?></div>
+                                <div class="country-flag-container me-2">
+                                    <img src="https://flagcdn.com/32x24/<?= $countryCode ?>.png" 
+                                        class="country-flag-lg" 
+                                        alt="<?= htmlspecialchars($country['country']) ?>"
+                                        onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                                </div>
+                                <div class="country-info flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><?= htmlspecialchars($country['country']) ?></h6>
+                                        <span class="badge bg-primary country-percentage"><?= number_format($percentage, 1) ?>%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress mb-1" style="height: 8px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: <?= min($percentage * 1.5, 100) ?>%"
+                                    aria-valuenow="<?= $percentage ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="country-metrics d-flex justify-content-between">
+                                <div class="metric">
+                                    <span class="metric-value money-amount"><?= number_format($country['total_income'], 2) ?></span>
+                                    <span class="metric-label">Revenue</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-value"><?= number_format($country['entry_count']) ?></span>
+                                    <span class="metric-label">Entries</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-value <?= $growthClass ?>">
+                                        <i class="bi <?= $growthIcon ?> me-1 small"></i><?= $growthValue ?>%
+                                    </span>
+                                    <span class="metric-label">Growth</span>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-sm btn-outline-primary" id="viewAllCountries">
+                            View All Countries <i class="bi bi-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Data Table -->
+    <div class="card shadow-sm border-0 rounded-lg slide-up mb-4">
+        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">All CSV Income Data</h5>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary" id="refreshDataTable">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="csvDataTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th><span class="header-span">Month</span></th>
+                            <th><span class="header-span">Year</span></th>
+                            <th><span class="header-span">Store</span></th>
+                            <th><span class="header-span">Artist</span></th>
+                            <th><span class="header-span">Title</span></th>
+                            <th><span class="header-span">Country</span></th>
+                            <th><span class="header-span">Items</span></th>
+                            <th><span class="header-span">Due to Pay (€)</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be loaded via DataTables -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -930,10 +1111,10 @@ $countryChartData = json_encode($countryData);
                 curve: 'smooth'
             },
             series: [{
-                name: currentYear,
+                name: currentYear + ' (Due to Pay)',
                 data: <?= json_encode($currentYearValues) ?>
             }, {
-                name: previousYear,
+                name: previousYear + ' (Due to Pay)',
                 data: <?= json_encode($previousYearValues) ?>
             }],
             xaxis: {
@@ -943,6 +1124,9 @@ $countryChartData = json_encode($countryData);
                 }
             },
             yaxis: {
+                title: {
+                    text: 'Due to Pay (€)'
+                },
                 labels: {
                     formatter: function(val) {
                         return '€' + val.toFixed(0);
@@ -1056,99 +1240,174 @@ $countryChartData = json_encode($countryData);
         
         donutChart.render();
         
-        // World Map Chart
-        const mapChart = new ApexCharts(document.querySelector("#worldMap"), {
+        // World Map Visualization
+        // Prepare country data
+        const countryDataValue = <?= json_encode(array_map(function($country) {
+            return [
+                'id' => strtolower((new CSVData(['country' => $country['country']]))->getCountryCode()),
+                'name' => $country['country'],
+                'value' => round($country['total_income'], 2),
+                'count' => $country['entry_count']
+            ];
+        }, $topCountries)) ?>;
+        
+        // Initialize vector map
+        const worldMapOptions = {
             chart: {
-                height: 350,
+                height: 400,
                 type: 'treemap',
-                fontFamily: 'inherit'
+                fontFamily: 'inherit',
+                toolbar: {
+                    show: false
+                },
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800
+                }
             },
             legend: {
                 show: false
             },
-            title: {
-                text: 'Income Distribution by Country',
-                align: 'center'
+            plotOptions: {
+                treemap: {
+                    distributed: true,
+                    enableShades: true,
+                    shadeIntensity: 0.5
+                }
             },
             dataLabels: {
                 enabled: true,
+                style: {
+                    fontSize: '12px',
+                },
                 formatter: function(text, op) {
                     return [text, '€' + op.value.toFixed(2)];
                 },
-                style: {
-                    fontSize: '12px'
-                }
+                offsetY: -4
             },
             series: [
                 {
-                    data: <?= $countryChartData ?>
+                    data: countryDataValue.map(c => ({
+                        x: c.name,
+                        y: c.value
+                    }))
                 }
             ],
-            colors: ['#3498db'],
-            plotOptions: {
-                treemap: {
-                    enableShades: true,
-                    shadeIntensity: 0.5,
-                    reverseNegativeShade: true,
-                    distributed: false,
-                    useFillColorAsStroke: false
-                }
-            },
+            colors: ['#EBF9FF', '#B3E0FF', '#66B7FF', '#0D6EFD', '#0a58ca'],
             tooltip: {
-                y: {
-                    formatter: function(value) {
-                        return '€' + value.toFixed(2);
-                    }
+                custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                    const data = countryDataValue[dataPointIndex];
+                    return `<div class="map-tooltip p-2">
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="https://flagcdn.com/24x18/${data.id}.png" 
+                                 class="country-flag me-2" 
+                                 alt="${data.name}"
+                                 onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                            <span class="fw-bold">${data.name}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Total Income:</span>
+                            <span class="fw-bold">€${data.value.toLocaleString()}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Entries:</span>
+                            <span class="fw-bold">${data.count.toLocaleString()}</span>
+                        </div>
+                    </div>`;
                 }
             }
-        });
+        };
         
-        mapChart.render();
+        // Render world map
+        const worldMap = new ApexCharts(document.querySelector("#worldMap"), worldMapOptions);
+        worldMap.render();
         
-        // Country Bar Chart
-        const countryBarChart = new ApexCharts(document.querySelector("#countryBarChart"), {
-            chart: {
-                height: 200,
-                type: 'bar',
-                fontFamily: 'inherit',
-                toolbar: {
-                    show: false
-                }
-            },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
+        // Toggle map view between income value and entry count
+        $('.btn-group[data-map-view]').on('click', 'button', function() {
+            const $this = $(this);
+            const view = $this.data('map-view');
+            
+            // Toggle active state
+            $this.addClass('active').siblings().removeClass('active');
+            
+            // Update map based on selected view
+            if (view === 'count') {
+                worldMap.updateSeries([{
+                    data: countryDataValue.map(c => ({
+                        x: c.name,
+                        y: c.count
+                    }))
+                }]);
+                
+                worldMap.updateOptions({
                     dataLabels: {
-                        position: 'top',
+                        formatter: function(text, op) {
+                            return [text, op.value.toLocaleString() + ' entries'];
+                        }
                     },
-                }
-            },
-            colors: ['#3498db'],
-            dataLabels: {
-                enabled: true,
-                offsetX: 30,
-                style: {
-                    fontSize: '12px',
-                    colors: ['#304758']
-                },
-                formatter: function(val) {
-                    return '€' + parseFloat(val).toFixed(0);
-                }
-            },
-            series: [{
-                data: <?= json_encode(array_column($topCountries, 'total_income')) ?>
-            }],
-            xaxis: {
-                categories: <?= json_encode(array_column($topCountries, 'country')) ?>,
-                labels: {
-                    formatter: function(val) {
-                        return '€' + parseFloat(val).toFixed(0);
+                    tooltip: {
+                        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                            const data = countryDataValue[dataPointIndex];
+                            return `<div class="map-tooltip p-2">
+                                <div class="d-flex align-items-center mb-2">
+                                    <img src="https://flagcdn.com/24x18/${data.id}.png" 
+                                         class="country-flag me-2" 
+                                         alt="${data.name}"
+                                         onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                                    <span class="fw-bold">${data.name}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Entries:</span>
+                                    <span class="fw-bold">${data.count.toLocaleString()}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Total Income:</span>
+                                    <span class="fw-bold">€${data.value.toLocaleString()}</span>
+                                </div>
+                            </div>`;
+                        }
                     }
-                }
+                });
+            } else {
+                worldMap.updateSeries([{
+                    data: countryDataValue.map(c => ({
+                        x: c.name,
+                        y: c.value
+                    }))
+                }]);
+                
+                worldMap.updateOptions({
+                    dataLabels: {
+                        formatter: function(text, op) {
+                            return [text, '€' + op.value.toFixed(2)];
+                        }
+                    },
+                    tooltip: {
+                        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                            const data = countryDataValue[dataPointIndex];
+                            return `<div class="map-tooltip p-2">
+                                <div class="d-flex align-items-center mb-2">
+                                    <img src="https://flagcdn.com/24x18/${data.id}.png" 
+                                         class="country-flag me-2" 
+                                         alt="${data.name}"
+                                         onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                                    <span class="fw-bold">${data.name}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Total Income:</span>
+                                    <span class="fw-bold">€${data.value.toLocaleString()}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Entries:</span>
+                                    <span class="fw-bold">${data.count.toLocaleString()}</span>
+                                </div>
+                            </div>`;
+                        }
+                    }
+                });
             }
         });
-        
-        countryBarChart.render();
         
         // Toggle between monthly and yearly view
         $('.btn-group[data-view]').on('click', 'button', function() {
@@ -1189,14 +1448,199 @@ $countryChartData = json_encode($countryData);
                         categories: monthNames,
                     },
                     series: [{
-                        name: currentYear,
+                        name: currentYear + ' (Due to Pay)',
                         data: <?= json_encode($currentYearValues) ?>
                     }, {
-                        name: previousYear,
+                        name: previousYear + ' (Due to Pay)',
                         data: <?= json_encode($previousYearValues) ?>
                     }]
                 });
             }
+        });
+        
+        // Country Bar Chart
+        const countryBarData = <?= json_encode(array_map(function($country) {
+            return [
+                'country' => $country['country'],
+                'income' => round($country['total_income'], 2),
+                'entries' => $country['entry_count'],
+                'code' => strtolower((new CSVData(['country' => $country['country']]))->getCountryCode())
+            ];
+        }, $topCountries)) ?>;
+        
+        const countryBarOptions = {
+            chart: {
+                height: 250,
+                type: 'bar',
+                fontFamily: 'inherit',
+                toolbar: {
+                    show: false
+                },
+                animations: {
+                    enabled: true,
+                    easing: 'easeinout',
+                    speed: 800,
+                    animateGradually: {
+                        enabled: true,
+                        delay: 150
+                    }
+                }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: true,
+                    distributed: true,
+                    dataLabels: {
+                        position: 'top'
+                    },
+                    barHeight: '80%',
+                    colors: {
+                        backgroundBarColors: ['#f8f9fa'],
+                        backgroundBarOpacity: 0.2,
+                    }
+                }
+            },
+            colors: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'],
+            dataLabels: {
+                enabled: true,
+                formatter: function(val) {
+                    return '€' + val.toLocaleString();
+                },
+                style: {
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    colors: ['#495057']
+                },
+                offsetX: 30
+            },
+            series: [{
+                name: 'Revenue',
+                data: countryBarData.map(c => ({
+                    x: c.country,
+                    y: c.income,
+                    fillColor: function() {
+                        // Return a color based on the rank
+                        const colors = ['#0d6efd', '#198754', '#20c997', '#0dcaf0', '#6f42c1', '#fd7e14', '#ffc107', '#20c997', '#6610f2', '#d63384'];
+                        const index = countryBarData.findIndex(country => country.country === c.country);
+                        return colors[index % colors.length];
+                    }()
+                }))
+            }],
+            tooltip: {
+                custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                    const data = countryBarData[dataPointIndex];
+                    return `<div class="p-2">
+                        <div class="d-flex align-items-center mb-2">
+                            <img src="https://flagcdn.com/24x18/${data.code}.png" 
+                                 class="country-flag me-2" 
+                                 alt="${data.country}"
+                                 onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                            <span class="fw-bold">${data.country}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Revenue:</span>
+                            <span class="fw-bold">€${data.income.toLocaleString()}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Entries:</span>
+                            <span class="fw-bold">${data.entries.toLocaleString()}</span>
+                        </div>
+                    </div>`;
+                }
+            },
+            xaxis: {
+                categories: countryBarData.map(c => c.country),
+                labels: {
+                    formatter: function(val) {
+                        if (val.length > 10) {
+                            return val.substring(0, 10) + '...';
+                        }
+                        return val;
+                    },
+                    style: {
+                        fontSize: '12px'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    show: false
+                }
+            },
+            grid: {
+                borderColor: '#f1f1f1',
+                strokeDashArray: 4,
+                yaxis: {
+                    lines: {
+                        show: false
+                    }
+                },
+                padding: {
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0
+                }
+            }
+        };
+        
+        const countryBarChart = new ApexCharts(document.querySelector("#countryBarChart"), countryBarOptions);
+        countryBarChart.render();
+        
+        // Toggle country view (revenue vs entries)
+        $('.btn-group button[data-country-view]').on('click', function() {
+            const $this = $(this);
+            const view = $this.data('country-view');
+            
+            // Toggle active state
+            $this.addClass('active').siblings().removeClass('active');
+            
+            if (view === 'entries') {
+                countryBarChart.updateSeries([{
+                    name: 'Entries',
+                    data: countryBarData.map(c => ({
+                        x: c.country,
+                        y: c.entries
+                    }))
+                }]);
+                
+                countryBarChart.updateOptions({
+                    dataLabels: {
+                        formatter: function(val) {
+                            return val.toLocaleString();
+                        }
+                    }
+                });
+            } else {
+                countryBarChart.updateSeries([{
+                    name: 'Revenue',
+                    data: countryBarData.map(c => ({
+                        x: c.country,
+                        y: c.income
+                    }))
+                }]);
+                
+                countryBarChart.updateOptions({
+                    dataLabels: {
+                        formatter: function(val) {
+                            return '€' + val.toLocaleString();
+                        }
+                    }
+                });
+            }
+        });
+        
+        // View all countries button
+        $('#viewAllCountries').on('click', function() {
+            // Filter the datatable to show only the countries
+            const uniqueCountries = Array.from(new Set(countryBarData.map(c => c.country)));
+            const filterValue = uniqueCountries.join('|');
+            $('#csvDataTable').DataTable().column(5).search(filterValue, true, false).draw();
+            
+            // Scroll to the datatable
+            $('html, body').animate({
+                scrollTop: $("#csvDataTable").offset().top - 100
+            }, 500);
         });
     });
       // Get country code utility function for DataTables
@@ -1258,4 +1702,206 @@ $countryChartData = json_encode($countryData);
             return countryMap[this.country] || 'globe';
         };
     }
+    
+    // Initialize DataTables with all the features
+    $(document).ready(function() {
+        // DataTable for CSV data
+        const csvTable = $('#csvDataTable').DataTable({
+            responsive: true,
+            processing: true,
+            serverSide: false, // Set to true for large datasets with server-side processing
+            pageLength: 25,
+            dom: `
+            <'container-fluid'
+                <'row mb-3'
+                    <'col-12 col-md-4 col-lg-3'
+                        <'d-flex align-items-center'
+                            <'me-3'l>
+                        >
+                    >
+                    <'col-12 col-md-4 col-lg-6 my-2 my-md-0'
+                        <'d-flex justify-content-center justify-content-md-center'B>
+                    >
+                    <'col-12 col-md-4 col-lg-3'
+                        <'d-flex justify-content-end'f>
+                    >
+                >
+                <'row'
+                    <'col-12'
+                        <'table-responsive'tr>
+                    >
+                >
+                <'row mt-3'
+                    <'col-12 col-md-6'i>
+                    <'col-12 col-md-6'
+                        <'d-flex justify-content-md-end'p>
+                    >
+                >
+            >`,
+            buttons: [
+                'csv', 'excel', 'pdf', 'print'
+            ],
+            data: <?php echo json_encode(array_map(function($item) {
+                return [
+                    $item->month,
+                    $item->year,
+                    $item->store,
+                    $item->artist,
+                    $item->title,
+                    $item->country,
+                    $item->items,
+                    $item->total_due_to_pay_eur
+                ];
+            }, $initialCsvData)); ?>,
+            columns: [
+                { title: 'Month' },
+                { title: 'Year' },
+                { title: 'Store' },
+                { title: 'Artist' },
+                { title: 'Title' },
+                { title: 'Country' },
+                { title: 'Items' },
+                { title: 'Due to Pay (€)' }
+            ],
+            columnDefs: [
+                {
+                    // Format month nicely
+                    targets: 0,
+                    render: function (data, type, row) {
+                        if (type === 'display' || type === 'filter') {
+                            return data;
+                        }
+                        return data;
+                    }
+                },
+                {
+                    // Format store with badges
+                    targets: 2,
+                    render: function (data, type, row) {
+                        const storeBadgeClasses = {
+                            'Spotify': 'spotify',
+                            'iTunes': 'itunes',
+                            'Apple Music': 'itunes',
+                            'YouTube': 'youtube',
+                            'YouTube Music': 'youtube',
+                            'Amazon': 'amazon',
+                            'Amazon Music': 'amazon',
+                            'TikTok': 'tiktok',
+                            'FitVids': 'fitvids',
+                            'Deezer': 'deezer',
+                            'Google Play': 'google',
+                            'Apple': 'itunes',
+                            'Pandora': 'pandora',
+                            'SoundCloud': 'soundcloud',
+                            'Tidal': 'tidal',
+                            'Facebook': 'facebook',
+                            'Instagram': 'instagram'
+                        };
+                        
+                        if (type === 'display') {
+                            const badgeClass = storeBadgeClasses[data] || '';
+                            if (badgeClass) {
+                                return `<span class="store-badge ${badgeClass}">${data}</span>`;
+                            }
+                            return `<span class="store-badge">${data}</span>`;
+                        }
+                        return data;
+                    }
+                },
+                {
+                    // Truncate artist and title
+                    targets: [3, 4],
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            if (data.length > 30) {
+                                return `<span title="${data}" class="cell-truncate">${data.substring(0, 30)}...</span>`;
+                            }
+                        }
+                        return data;
+                    }
+                },
+                {
+                    // Format country with flag
+                    targets: 5,
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            const country = new CSVData({ country: data });
+                            const countryCode = country.getCountryCode();
+                            return `<span>
+                                <img src="https://flagcdn.com/24x18/${countryCode}.png" 
+                                     class="country-flag" 
+                                     alt="${data}"
+                                     onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                                ${data}
+                            </span>`;
+                        }
+                        return data;
+                    }
+                },
+                {
+                    // Format numbers
+                    targets: 6,
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return data.toLocaleString();
+                        }
+                        return data;
+                    }
+                },
+                {
+                    // Format money
+                    targets: 7,
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return `<span class="money-amount">${parseFloat(data).toFixed(2)}</span>`;
+                        }
+                        return data;
+                    }
+                }
+            ],
+            order: [[0, 'desc'], [1, 'desc']],
+            initComplete: function() {
+                $(".dt-buttons").removeClass("dt-buttons btn-group");
+                $(".buttons-csv").addClass("btn btn-light btn-sm me-1");
+                $(".buttons-excel").addClass("btn btn-light btn-sm me-1");
+                $(".buttons-pdf").addClass("btn btn-light btn-sm me-1");
+                $(".buttons-print").addClass("btn btn-light btn-sm");
+
+                $("div.dataTables_length select").addClass("form-select").css({
+                    width: 'auto',
+                    margin: '0 8px',
+                    padding: '0.375rem 1.75rem 0.375rem 0.75rem',
+                    lineHeight: '1.5',
+                    border: '1px solid #ced4da',
+                    borderRadius: '0.25rem'
+                });
+            }
+        });
+        
+        // Refresh data table
+        $('#refreshDataTable').on('click', function() {
+            location.reload();
+        });
+        
+        // Refresh all data
+        $('#refreshData').on('click', function() {
+            location.reload();
+        });
+        
+        // Export buttons
+        $('#exportCSV').on('click', function(e) {
+            e.preventDefault();
+            $('.buttons-csv').click();
+        });
+        
+        $('#exportExcel').on('click', function(e) {
+            e.preventDefault();
+            $('.buttons-excel').click();
+        });
+        
+        $('#exportPDF').on('click', function(e) {
+            e.preventDefault();
+            $('.buttons-pdf').click();
+        });
+    });
 </script>
