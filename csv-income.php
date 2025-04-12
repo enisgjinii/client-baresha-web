@@ -777,8 +777,18 @@ $previousYear = $currentYear - 1;
 
 // Initialize monthlyData for all months of current and previous year
 $allMonths = [
-    'Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor',
-    'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'
+    'Janar',
+    'Shkurt',
+    'Mars',
+    'Prill',
+    'Maj',
+    'Qershor',
+    'Korrik',
+    'Gusht',
+    'Shtator',
+    'Tetor',
+    'Nëntor',
+    'Dhjetor'
 ];
 
 foreach ($allMonths as $month) {
@@ -788,9 +798,18 @@ foreach ($allMonths as $month) {
 
 // Map English month names to Albanian month names for data processing
 $monthMap = [
-    'January' => 'Janar', 'February' => 'Shkurt', 'March' => 'Mars', 'April' => 'Prill',
-    'May' => 'Maj', 'June' => 'Qershor', 'July' => 'Korrik', 'August' => 'Gusht',
-    'September' => 'Shtator', 'October' => 'Tetor', 'November' => 'Nëntor', 'December' => 'Dhjetor'
+    'January' => 'Janar',
+    'February' => 'Shkurt',
+    'March' => 'Mars',
+    'April' => 'Prill',
+    'May' => 'Maj',
+    'June' => 'Qershor',
+    'July' => 'Korrik',
+    'August' => 'Gusht',
+    'September' => 'Shtator',
+    'October' => 'Tetor',
+    'November' => 'Nëntor',
+    'December' => 'Dhjetor'
 ];
 
 foreach ($initialCsvData as $data) {
@@ -1412,6 +1431,14 @@ $countryChartData = json_encode($countryData);
                     </div>
                 </div>
                 <div class="card-body">
+                    <!-- Sum Display Section (Replaces Filter Section) -->
+                    <div class="mb-4 p-3 border rounded bg-light">
+                        <h6 class="mb-2">Shuma Totale për Rezultatet e Filtruara</h6>
+                        <div id="songSumResult" class="fw-bold" style="font-size: 1.1rem;">
+                            <!-- Sum will be displayed here -->
+                            <span class="text-muted">Shkruani në kutinë e kërkimit më poshtë për të filtruar dhe parë shumën.</span>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover" id="csvDataTable">
                             <thead class="table-light">
@@ -1431,6 +1458,8 @@ $countryChartData = json_encode($countryData);
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- End Sum Display Section -->
                 </div>
             </div>
         </div>
@@ -1610,12 +1639,12 @@ $countryChartData = json_encode($countryData);
                 width: [3, 3, 2],
                 curve: 'smooth',
                 dashArray: [0, 0, 5]
-            }, // Added dash for MA line
+            },
             series: [{
                     name: currentYear + ' (Për t\'u Paguar)',
                     data: currentYearData,
                     type: 'area'
-                }, // Specify type per series for mixed charts
+                },
                 {
                     name: previousYear + ' (Për t\'u Paguar)',
                     data: previousYearData,
@@ -1993,6 +2022,7 @@ $countryChartData = json_encode($countryData);
                     chart: {
                         type: currentMonthlyChartType
                     },
+
                     stroke: {
                         width: [3, 3, 2],
                         curve: 'smooth',
@@ -2029,7 +2059,6 @@ $countryChartData = json_encode($countryData);
             }
         });
 
-        // Toggle monthly chart type (```php
         // Toggle monthly chart type (Area, Line, Bar)
         $('.btn-group[data-view-type="monthly"]').on('click', 'button', function() {
             const $this = $(this);
@@ -2077,7 +2106,6 @@ $countryChartData = json_encode($countryData);
                 }
             });
         });
-
 
         // Country Bar Chart
         const countryBarData = <?= json_encode(array_map(function ($country) {
@@ -2776,7 +2804,7 @@ $countryChartData = json_encode($countryData);
             responsive: true,
             processing: true,
             serverSide: false, // Set to true for large datasets with server-side processing
-            pageLength: 25,
+            pageLength: 25, // You might want to increase this or use -1 to show all if removing pagination
             language: { // Add Albanian language settings
                 "processing": "Duke procesuar...",
                 "lengthMenu": "Shfaq _MENU_ regjistrime për faqe",
@@ -2803,6 +2831,7 @@ $countryChartData = json_encode($countryData);
                     "print": "Printo"
                 }
             },
+            // Updated dom: Removed 'i' (info) and 'p' (pagination)
             dom: `
             <'container-fluid'
                 <'row mb-3'
@@ -2824,9 +2853,9 @@ $countryChartData = json_encode($countryData);
                     >
                 >
                 <'row mt-3'
-                    <'col-12 col-md-6'>
+                    <'col-12 col-md-6'> // Removed 'i'
                     <'col-12 col-md-6'
-                        <'d-flex justify-content-md-end'>
+                        <'d-flex justify-content-md-end'> // Removed 'p'
                     >
                 >
             >`,
@@ -2836,9 +2865,18 @@ $countryChartData = json_encode($countryData);
             data: <?php echo json_encode(array_map(function ($item) {
                         // Map English month names to Albanian for display in the table
                         $monthMap = [
-                            'January' => 'Janar', 'February' => 'Shkurt', 'March' => 'Mars', 'April' => 'Prill',
-                            'May' => 'Maj', 'June' => 'Qershor', 'July' => 'Korrik', 'August' => 'Gusht',
-                            'September' => 'Shtator', 'October' => 'Tetor', 'November' => 'Nëntor', 'December' => 'Dhjetor'
+                            'January' => 'Janar',
+                            'February' => 'Shkurt',
+                            'March' => 'Mars',
+                            'April' => 'Prill',
+                            'May' => 'Maj',
+                            'June' => 'Qershor',
+                            'July' => 'Korrik',
+                            'August' => 'Gusht',
+                            'September' => 'Shtator',
+                            'October' => 'Tetor',
+                            'November' => 'Nëntor',
+                            'December' => 'Dhjetor'
                         ];
                         $displayMonth = isset($monthMap[$item->month]) ? $monthMap[$item->month] : $item->month;
 
@@ -2979,7 +3017,7 @@ $countryChartData = json_encode($countryData);
             ],
             order: [
                 [1, 'desc'], // Order by Year descending first
-                [0, 'desc']  // Then by Month descending
+                [0, 'desc'] // Then by Month descending
             ],
             initComplete: function() {
                 $(".dt-buttons").removeClass("dt-buttons btn-group");
@@ -2999,30 +3037,34 @@ $countryChartData = json_encode($countryData);
             }
         });
 
-        // Refresh data table
-        $('#refreshDataTable').on('click', function() {
-            location.reload();
-        });
+        // --- Calculate Sum on Table Draw (Filter) ---
+        csvTable.on('draw.dt', function() {
+            let totalSum = 0;
+            const sumResultDiv = $('#songSumResult');
+            const searchTerm = csvTable.search(); // Get the current search term
 
-        // Refresh all data
-        $('#refreshData').on('click', function() {
-            location.reload();
-        });
+            // Iterate over the data for the currently displayed (filtered) rows
+            csvTable.rows({
+                search: 'applied'
+            }).data().each(function(rowData) {
+                // Access the 'Për t'u Paguar (€)' column data (index 7)
+                const amount = parseFloat(rowData[7]) || 0;
+                totalSum += amount;
+            });
 
-        // Export buttons
-        $('#exportCSV').on('click', function(e) {
-            e.preventDefault();
-            $('.buttons-csv').click();
+            // Display the result based on whether there's a search term
+            if (searchTerm) {
+                sumResultDiv.html(`Shuma totale për kërkimin "<strong>${searchTerm}</strong>": <span class="text-success">€${totalSum.toFixed(2)}</span>`);
+            } else {
+                // Optionally clear or show a default message when search is empty
+                sumResultDiv.html('<span class="text-muted">Shkruani në kutinë e kërkimit më lart për të filtruar dhe parë shumën.</span>');
+            }
         });
+        // --- End Calculate Sum on Table Draw ---
 
-        $('#exportExcel').on('click', function(e) {
-            e.preventDefault();
-            $('.buttons-excel').click();
-        });
+        // Remove the old button click handlers
+        // $('#filterSumButton').on('click', function() { ... }); // REMOVED
+        // $('#clearFilterButton').on('click', function() { ... }); // REMOVED
 
-        $('#exportPDF').on('click', function(e) {
-            e.preventDefault();
-            $('.buttons-pdf').click();
-        });
     });
 </script>
