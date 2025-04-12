@@ -57,41 +57,285 @@ class CSVData {
     
     // Get country code for flag display (ISO 3166-1 alpha-2)
     public function getCountryCode() {
+        // Expanded country map
         $countryMap = [
-            'United States' => 'us',
-            'United Kingdom' => 'gb',
-            'Germany' => 'de',
-            'France' => 'fr',
-            'Italy' => 'it',
-            'Spain' => 'es',
-            'Japan' => 'jp',
-            'Canada' => 'ca',
-            'Australia' => 'au',
-            'Brazil' => 'br',
-            'Mexico' => 'mx',
-            'Russia' => 'ru',
-            'China' => 'cn',
-            'India' => 'in',
-            'South Korea' => 'kr',
-            'Netherlands' => 'nl',
-            'Sweden' => 'se',
-            'Norway' => 'no',
-            'Denmark' => 'dk',
-            'Poland' => 'pl',
-            'Belgium' => 'be',
-            'Switzerland' => 'ch',
-            'Austria' => 'at',
-            // Add more mappings as needed
+            // Existing
+            'United States' => 'us', 'USA' => 'us', 'US' => 'us',
+            'United Kingdom' => 'gb', 'UK' => 'gb', 'GB' => 'gb',
+            'Germany' => 'de', 'DE' => 'de',
+            'France' => 'fr', 'FR' => 'fr',
+            'Italy' => 'it', 'IT' => 'it',
+            'Spain' => 'es', 'ES' => 'es',
+            'Japan' => 'jp', 'JP' => 'jp',
+            'Canada' => 'ca', 'CA' => 'ca',
+            'Australia' => 'au', 'AU' => 'au',
+            'Brazil' => 'br', 'BR' => 'br',
+            'Mexico' => 'mx', 'MX' => 'mx',
+            'Russia' => 'ru', 'RU' => 'ru',
+            'China' => 'cn', 'CN' => 'cn',
+            'India' => 'in', 'IN' => 'in',
+            'South Korea' => 'kr', 'KR' => 'kr',
+            'Netherlands' => 'nl', 'NL' => 'nl',
+            'Sweden' => 'se', 'SE' => 'se',
+            'Norway' => 'no', 'NO' => 'no',
+            'Denmark' => 'dk', 'DK' => 'dk',
+            'Poland' => 'pl', 'PL' => 'pl',
+            'Belgium' => 'be', 'BE' => 'be',
+            'Switzerland' => 'ch', 'CH' => 'ch',
+            'Austria' => 'at', 'AT' => 'at',
+            'Kosovo' => 'xk', 'XK' => 'xk', // Added Kosovo
+
+            // New additions from list
+            'Ecuador' => 'ec', 'EC' => 'ec',
+            'Colombia' => 'co', 'CO' => 'co',
+            'Macedonia' => 'mk', 'MK' => 'mk', // North Macedonia
+            'Greece' => 'gr', 'GR' => 'gr',
+            'Finland' => 'fi', 'FI' => 'fi',
+            'Luxembourg' => 'lu', 'LU' => 'lu',
+            'Croatia' => 'hr', 'HR' => 'hr',
+            'Malta' => 'mt', 'MT' => 'mt',
+            'Romania' => 'ro', 'RO' => 'ro',
+            'Liechtenstein' => 'li', 'LI' => 'li',
+            'Slovenia' => 'si', 'SI' => 'si',
+            'Hungary' => 'hu', 'HU' => 'hu',
+            'Ireland' => 'ie', 'IE' => 'ie',
+            'Serbia' => 'rs', 'RS' => 'rs',
+            'Czech Republic' => 'cz', 'CZ' => 'cz',
+            'Bulgaria' => 'bg', 'BG' => 'bg',
+            'Turkey' => 'tr', 'TR' => 'tr',
+            'Slovakia' => 'sk', 'SK' => 'sk',
+            'United Arab Emirates' => 'ae', 'AE' => 'ae',
+            'Algeria' => 'dz', 'DZ' => 'dz',
+            'Saudi Arabia' => 'sa', 'SA' => 'sa',
+            'Israel' => 'il', 'IL' => 'il',
+            'Iceland' => 'is', 'IS' => 'is',
+            'Portugal' => 'pt', 'PT' => 'pt',
+            'Bosnia and Herzegovina' => 'ba', 'BA' => 'ba',
+            'Singapore' => 'sg', 'SG' => 'sg',
+            'Hong Kong' => 'hk', 'HK' => 'hk',
+            'New Zealand' => 'nz', 'NZ' => 'nz',
+            'Estonia' => 'ee', 'EE' => 'ee',
+            'Kazakhstan' => 'kz', 'KZ' => 'kz',
+            'Lithuania' => 'lt', 'LT' => 'lt',
+            'Thailand' => 'th', 'TH' => 'th',
+            'Indonesia' => 'id', 'ID' => 'id',
+            'Iraq' => 'iq', 'IQ' => 'iq',
+            'Qatar' => 'qa', 'QA' => 'qa',
+            'Bahrain' => 'bh', 'BH' => 'bh',
+            'South Africa' => 'za', 'ZA' => 'za',
+            'Egypt' => 'eg', 'EG' => 'eg',
+            'Cyprus' => 'cy', 'CY' => 'cy',
+            'Morocco' => 'ma', 'MA' => 'ma',
+            'Argentina' => 'ar', 'AR' => 'ar',
+            'Philippines' => 'ph', 'PH' => 'ph',
+            'Chile' => 'cl', 'CL' => 'cl',
+            'Kuwait' => 'kw', 'KW' => 'kw',
+            'Kenya' => 'ke', 'KE' => 'ke',
+            'Guatemala' => 'gt', 'GT' => 'gt',
+            'Taiwan' => 'tw', 'TW' => 'tw',
+            'Tunisia' => 'tn', 'TN' => 'tn',
+            'Vietnam' => 'vn', 'VN' => 'vn',
+            'Aruba' => 'aw', 'AW' => 'aw',
+            'Georgia' => 'ge', 'GE' => 'ge',
+            'Malaysia' => 'my', 'MY' => 'my',
+            'Jordan' => 'jo', 'JO' => 'jo',
+            'Ukraine' => 'ua', 'UA' => 'ua',
+            'Azerbaijan' => 'az', 'AZ' => 'az',
+            'Venezuela' => 've', 'VE' => 've',
+            'Dominican Republic' => 'do', 'DO' => 'do',
+            'Bangladesh' => 'bd', 'BD' => 'bd',
+            'Libya' => 'ly', 'LY' => 'ly',
+            'Bolivia' => 'bo', 'BO' => 'bo',
+            'Ghana' => 'gh', 'GH' => 'gh',
+            'Sri Lanka' => 'lk', 'LK' => 'lk',
+            'Nigeria' => 'ng', 'NG' => 'ng',
+            'Peru' => 'pe', 'PE' => 'pe',
+            'Pakistan' => 'pk', 'PK' => 'pk',
+            'Paraguay' => 'py', 'PY' => 'py',
+            'Albania' => 'al', 'AL' => 'al',
+            'Mali' => 'ml', 'ML' => 'ml',
+            'Montenegro' => 'me', 'ME' => 'me',
+            'Réunion' => 're', 'RE' => 're', // Reunion
+            'Cameroon' => 'cm', 'CM' => 'cm',
+            'Guyana' => 'gy', 'GY' => 'gy',
+            'Uzbekistan' => 'uz', 'UZ' => 'uz',
+            'Burkina Faso' => 'bf', 'BF' => 'bf',
+            'Greenland' => 'gl', 'GL' => 'gl',
+            'Chad' => 'td', 'TD' => 'td',
+            'Costa Rica' => 'cr', 'CR' => 'cr',
+            'Gabon' => 'ga', 'GA' => 'ga',
+            'Myanmar' => 'mm', 'MM' => 'mm', // (Burma)
+            'Honduras' => 'hn', 'HN' => 'hn',
+            'Afghanistan' => 'af', 'AF' => 'af',
+            'Benin' => 'bj', 'BJ' => 'bj',
+            'Panama' => 'pa', 'PA' => 'pa',
+            'Iran' => 'ir', 'IR' => 'ir',
+            'Tanzania' => 'tz', 'TZ' => 'tz',
+            'Latvia' => 'lv', 'LV' => 'lv',
+            'Congo - Kinshasa' => 'cd', 'CD' => 'cd', // Democratic Republic of the Congo
+            'Lebanon' => 'lb', 'LB' => 'lb',
+            'Ethiopia' => 'et', 'ET' => 'et',
+            'Sudan' => 'sd', 'SD' => 'sd',
+            'Monaco' => 'mc', 'MC' => 'mc',
+            'Uruguay' => 'uy', 'UY' => 'uy',
+            'Togo' => 'tg', 'TG' => 'tg',
+            'Mauritius' => 'mu', 'MU' => 'mu',
+            'Tajikistan' => 'tj', 'TJ' => 'tj',
+            'Palestine' => 'ps', 'PS' => 'ps',
+            'Mauritania' => 'mr', 'MR' => 'mr',
+            'Côte d’Ivoire' => 'ci', 'CI' => 'ci', // Ivory Coast
+            'Turkmenistan' => 'tm', 'TM' => 'tm',
+            'Maldives' => 'mv', 'MV' => 'mv',
+            'Bhutan' => 'bt', 'BT' => 'bt',
+            'Armenia' => 'am', 'AM' => 'am',
+            'Nepal' => 'np', 'NP' => 'np',
+            'Mongolia' => 'mn', 'MN' => 'mn',
+            'Moldova' => 'md', 'MD' => 'md',
+            'Guinea' => 'gn', 'GN' => 'gn',
+            'El Salvador' => 'sv', 'SV' => 'sv',
+            'Mozambique' => 'mz', 'MZ' => 'mz',
+            'Uganda' => 'ug', 'UG' => 'ug',
+            'Central African Republic' => 'cf', 'CF' => 'cf',
+            'Tokelau' => 'tk', 'TK' => 'tk',
+            'Isle of Man' => 'im', 'IM' => 'im',
+            'Fiji' => 'fj', 'FJ' => 'fj',
+            'Zimbabwe' => 'zw', 'ZW' => 'zw',
+            'Somalia' => 'so', 'SO' => 'so',
+            'Belarus' => 'by', 'BY' => 'by',
+            'Kyrgyzstan' => 'kg', 'KG' => 'kg',
+            'Yemen' => 'ye', 'YE' => 'ye',
+            'Congo - Brazzaville' => 'cg', 'CG' => 'cg', // Republic of the Congo
+            'New Caledonia' => 'nc', 'NC' => 'nc',
+            'Seychelles' => 'sc', 'SC' => 'sc',
+            'Senegal' => 'sn', 'SN' => 'sn',
+            'Trinidad and Tobago' => 'tt', 'TT' => 'tt',
+            'Jamaica' => 'jm', 'JM' => 'jm',
+            'Timor-Leste' => 'tl', 'TL' => 'tl', // East Timor (TP is old code)
+            'Suriname' => 'sr', 'SR' => 'sr',
+            'Angola' => 'ao', 'AO' => 'ao',
+            'Nicaragua' => 'ni', 'NI' => 'ni',
+            'Liberia' => 'lr', 'LR' => 'lr',
+            'Niger' => 'ne', 'NE' => 'ne',
+            'Gambia' => 'gm', 'GM' => 'gm',
+            'South Sudan' => 'ss', 'SS' => 'ss',
+            'British Virgin Islands' => 'vg', 'VG' => 'vg',
+            'Gibraltar' => 'gi', 'GI' => 'gi',
+            'Kiribati' => 'ki', 'KI' => 'ki',
+            'Martinique' => 'mq', 'MQ' => 'mq',
+            'Faroe Islands' => 'fo', 'FO' => 'fo',
+            'French Polynesia' => 'pf', 'PF' => 'pf',
+            'U.S. Virgin Islands' => 'vi', 'VI' => 'vi',
+            'Cayman Islands' => 'ky', 'KY' => 'ky',
+            'Botswana' => 'bw', 'BW' => 'bw',
+            'San Marino' => 'sm', 'SM' => 'sm',
+            'Eswatini' => 'sz', 'SZ' => 'sz', // Swaziland
+            'French Guiana' => 'gf', 'GF' => 'gf',
+            'Papua New Guinea' => 'pg', 'PG' => 'pg',
+            'Marshall Islands' => 'mh', 'MH' => 'mh',
+            'Solomon Islands' => 'sb', 'SB' => 'sb',
+            'Comoros' => 'km', 'KM' => 'km',
+            'Samoa' => 'ws', 'WS' => 'ws',
+            'Bermuda' => 'bm', 'BM' => 'bm',
+            'Guadeloupe' => 'gp', 'GP' => 'gp',
+            'Malawi' => 'mw', 'MW' => 'mw',
+            'Åland Islands' => 'ax', 'AX' => 'ax',
+            'Barbados' => 'bb', 'BB' => 'bb',
+            'Lesotho' => 'ls', 'LS' => 'ls',
+            'Brunei' => 'bn', 'BN' => 'bn',
+            'Sierra Leone' => 'sl', 'SL' => 'sl',
+            'Djibouti' => 'dj', 'DJ' => 'dj',
+            'Northern Mariana Islands' => 'mp', 'MP' => 'mp',
+            'Guam' => 'gu', 'GU' => 'gu',
+            'Turks and Caicos Islands' => 'tc', 'TC' => 'tc',
+            'Bahamas' => 'bs', 'BS' => 'bs',
+            'Anguilla' => 'ai', 'AI' => 'ai',
+            'Haiti' => 'ht', 'HT' => 'ht',
+            'Cambodia' => 'kh', 'KH' => 'kh',
+            'Micronesia' => 'fm', 'FM' => 'fm',
+            'Curaçao' => 'cw', 'CW' => 'cw',
+            'Grenada' => 'gd', 'GD' => 'gd',
+            'Equatorial Guinea' => 'gq', 'GQ' => 'gq',
+            'Jersey' => 'je', 'JE' => 'je',
+            'Mayotte' => 'yt', 'YT' => 'yt',
+            'Oman' => 'om', 'OM' => 'om',
+            'Macao SAR China' => 'mo', 'MO' => 'mo', // Macau
+            'Antigua and Barbuda' => 'ag', 'AG' => 'ag',
+            'American Samoa' => 'as', 'AS' => 'as',
+            'Syria' => 'sy', 'SY' => 'sy',
+            'Andorra' => 'ad', 'AD' => 'ad',
+            'Zambia' => 'zm', 'ZM' => 'zm',
+            'Madagascar' => 'mg', 'MG' => 'mg',
+            'Rwanda' => 'rw', 'RW' => 'rw',
+            'Cape Verde' => 'cv', 'CV' => 'cv',
+            'Laos' => 'la', 'LA' => 'la',
+            'Guernsey' => 'gg', 'GG' => 'gg',
+            'Belize' => 'bz', 'BZ' => 'bz',
+            'St. Kitts and Nevis' => 'kn', 'KN' => 'kn',
+            'Puerto Rico' => 'pr', 'PR' => 'pr',
+            'Guinea-Bissau' => 'gw', 'GW' => 'gw',
+            'St. Lucia' => 'lc', 'LC' => 'lc',
+            'Dominica' => 'dm', 'DM' => 'dm',
+            'Burundi' => 'bi', 'BI' => 'bi',
+            'Montserrat' => 'ms', 'MS' => 'ms',
+            'Vanuatu' => 'vu', 'VU' => 'vu',
+            'Sint Maarten' => 'sx', 'SX' => 'sx',
+            'Vatican City' => 'va', 'VA' => 'va',
+            'St. Pierre and Miquelon' => 'pm', 'PM' => 'pm',
+            'Caribbean Netherlands' => 'bq', 'BQ' => 'bq', // Bonaire, Sint Eustatius and Saba
+            'Wallis and Futuna' => 'wf', 'WF' => 'wf',
+            'St. Vincent and Grenadines' => 'vc', 'VC' => 'vc',
+            'São Tomé and Príncipe' => 'st', 'ST' => 'st',
+            'Cook Islands' => 'ck', 'CK' => 'ck',
+            'Palau' => 'pw', 'PW' => 'pw',
+            'St. Martin' => 'mf', 'MF' => 'mf',
+            'Eritrea' => 'er', 'ER' => 'er',
+            'Niue' => 'nu', 'NU' => 'nu',
+            'Tonga' => 'to', 'TO' => 'to',
+            'Tuvalu' => 'tv', 'TV' => 'tv',
+            'Falkland Islands' => 'fk', 'FK' => 'fk',
+            // Add more specific mappings if needed
         ];
 
-        $countryCode = isset($countryMap[$this->country]) ? $countryMap[$this->country] : null;
+        // Normalize country name for lookup (trim whitespace, case-insensitive)
+        $normalizedCountry = trim($this->country);
+        $countryCode = null;
+
+        // Try direct match first (case-sensitive for potential exact matches like 'US')
+        if (isset($countryMap[$normalizedCountry])) {
+            $countryCode = $countryMap[$normalizedCountry];
+        } else {
+            // Try case-insensitive match
+            foreach ($countryMap as $name => $code) {
+                if (strcasecmp($normalizedCountry, $name) === 0) {
+                    $countryCode = $code;
+                    break;
+                }
+            }
+        }
 
         // Fallback logic for missing or invalid country codes
         if (!$countryCode) {
-            $countryCode = strtolower(substr($this->country, 0, 2)); // Try using the first two letters
-            if (!preg_match('/^[a-z]{2}$/', $countryCode)) {
-                $countryCode = 'globe'; // Default to globe if invalid
+            // If the input itself is a valid 2-letter code in our map values, use it
+            if (strlen($normalizedCountry) === 2 && preg_match('/^[a-zA-Z]{2}$/', $normalizedCountry)) {
+                 $upperCaseInput = strtoupper($normalizedCountry);
+                 // Check if the uppercase version exists as a key or value
+                 if (isset($countryMap[$upperCaseInput])) {
+                     $countryCode = $countryMap[$upperCaseInput];
+                 } elseif (in_array(strtolower($normalizedCountry), $countryMap)) {
+                     $countryCode = strtolower($normalizedCountry);
+                 }
             }
+        }
+
+        // Final fallback to globe
+        if (!$countryCode || !preg_match('/^[a-z]{2}$/', $countryCode)) {
+             // Attempt to get first two letters as a last resort before 'globe'
+             $firstTwo = strtolower(substr($normalizedCountry, 0, 2));
+             if (preg_match('/^[a-z]{2}$/', $firstTwo) && in_array($firstTwo, $countryMap)) {
+                 $countryCode = $firstTwo;
+             } else {
+                 $countryCode = 'globe'; // Default to globe if still invalid or not found
+             }
         }
 
         return $countryCode;
@@ -870,11 +1114,18 @@ $countryChartData = json_encode($countryData);
     <div class="row mb-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 rounded-lg slide-up">
-                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Monthly Income Trends</h5>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-secondary active" data-view="month">Month</button>
-                        <button type="button" class="btn btn-outline-secondary" data-view="year">Year</button>
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center flex-wrap">
+                    <h5 class="mb-0 me-2">Monthly Income Trends</h5>
+                    <div class="chart-controls d-flex">
+                        <div class="btn-group btn-group-sm" data-view-type="monthly">
+                            <button type="button" class="btn btn-outline-secondary active" data-chart-type="area">Area</button>
+                            <button type="button" class="btn btn-outline-secondary" data-chart-type="line">Line</button>
+                            <button type="button" class="btn btn-outline-secondary" data-chart-type="bar">Bar</button>
+                        </div>
+                        <div class="btn-group btn-group-sm" data-view="timeframe">
+                            <button type="button" class="btn btn-outline-secondary active" data-view="month">Month</button>
+                            <button type="button" class="btn btn-outline-secondary" data-view="year">Year</button>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -1041,7 +1292,8 @@ $countryChartData = json_encode($countryData);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css"></script>
 
 <script>
-    $(document).ready(function() {        // Store badge color mapping with enhanced styling
+    $(document).ready(function() {
+        // Store badge color mapping with enhanced styling
         const storeBadgeClasses = {
             'Spotify': 'spotify',
             'iTunes': 'itunes',
@@ -1080,84 +1332,75 @@ $countryChartData = json_encode($countryData);
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const currentYear = new Date().getFullYear();
         const previousYear = currentYear - 1;
-        
-        const monthlyChart = new ApexCharts(document.querySelector("#monthlyIncomeChart"), {
+        const currentYearData = <?= json_encode($currentYearValues) ?>;
+        const previousYearData = <?= json_encode($previousYearValues) ?>;
+        const yearlyLabels = <?= $yearLabels ?>;
+        const yearlyValues = <?= $yearValues ?>;
+
+        // Calculate 3-Month Moving Average for Current Year
+        function calculateMovingAverage(data, windowSize) {
+            if (!data || data.length < windowSize) {
+                return new Array(data.length).fill(null); // Not enough data for MA
+            }
+            let result = new Array(windowSize - 1).fill(null); // Fill initial points with null
+            for (let i = windowSize - 1; i < data.length; i++) {
+                let sum = 0;
+                for (let j = 0; j < windowSize; j++) {
+                    sum += data[i - j];
+                }
+                result.push(parseFloat((sum / windowSize).toFixed(2)));
+            }
+            return result;
+        }
+
+        const movingAverageData = calculateMovingAverage(currentYearData, 3);
+
+        // Initial Monthly Chart Options
+        let monthlyChartOptions = {
             chart: {
                 height: 350,
-                type: 'area',
+                type: 'area', // Default type
                 fontFamily: 'inherit',
                 toolbar: {
                     show: true,
-                    tools: {
-                        download: true,
-                        selection: true,
-                        zoom: true,
-                        zoomin: true,
-                        zoomout: true,
-                        pan: true
-                    }
+                    tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true }
                 },
-                animations: {
-                    enabled: true,
-                    easing: 'easeinout',
-                    speed: 800
-                }
+                animations: { enabled: true, easing: 'easeinout', speed: 800 }
             },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                width: [3, 3],
-                curve: 'smooth'
-            },
-            series: [{
-                name: currentYear + ' (Due to Pay)',
-                data: <?= json_encode($currentYearValues) ?>
-            }, {
-                name: previousYear + ' (Due to Pay)',
-                data: <?= json_encode($previousYearValues) ?>
-            }],
-            xaxis: {
-                categories: monthNames,
-                labels: {
-                    rotate: 0
-                }
-            },
+            dataLabels: { enabled: false },
+            stroke: { width: [3, 3, 2], curve: 'smooth', dashArray: [0, 0, 5] }, // Added dash for MA line
+            series: [
+                { name: currentYear + ' (Due to Pay)', data: currentYearData, type: 'area' }, // Specify type per series for mixed charts
+                { name: previousYear + ' (Due to Pay)', data: previousYearData, type: 'area' },
+                { name: '3-Month Moving Avg', data: movingAverageData, type: 'line' } // MA is always a line
+            ],
+            xaxis: { categories: monthNames, labels: { rotate: 0 } },
             yaxis: {
-                title: {
-                    text: 'Due to Pay (€)'
-                },
-                labels: {
-                    formatter: function(val) {
-                        return '€' + val.toFixed(0);
-                    }
-                }
+                title: { text: 'Due to Pay (€)' },
+                labels: { formatter: function(val) { return '€' + (val !== null ? val.toFixed(0) : '0'); } }
             },
             tooltip: {
-                y: {
-                    formatter: function(value) {
-                        return '€' + value.toFixed(2);
-                    }
-                }
+                y: { formatter: function(value) { return value !== null ? '€' + value.toFixed(2) : 'N/A'; } },
+                shared: true, // Show tooltip for all series at once
+                intersect: false // Show tooltip even when not directly hovering over a point/area
             },
-            legend: {
-                position: 'top'
-            },
-            colors: ['#3498db', '#7f8c8d'],
+            legend: { position: 'top' },
+            colors: ['#3498db', '#7f8c8d', '#e74c3c'], // Added color for MA
             fill: {
                 type: 'gradient',
                 gradient: {
-                    shade: 'light',
-                    type: "vertical",
-                    shadeIntensity: 0.25,
-                    gradientToColors: ['#2c3e50', '#bdc3c7'],
-                    inverseColors: false,
-                    opacityFrom: 0.7,
-                    opacityTo: 0.3
+                    shade: 'light', type: "vertical", shadeIntensity: 0.25,
+                    gradientToColors: ['#2c3e50', '#bdc3c7', undefined], // MA line doesn't need gradient fill
+                    inverseColors: false, opacityFrom: [0.7, 0.7, 1], opacityTo: [0.3, 0.3, 1] // Adjust opacity
                 }
+            },
+            markers: { // Optionally add markers for the line charts
+                size: [0, 0, 0], // Hide markers by default
+                hover: { size: 5 }
             }
-        });
-        
+        };
+
+        const monthlyChart = new ApexCharts(document.querySelector("#monthlyIncomeChart"), monthlyChartOptions);
         monthlyChart.render();
         
         // Store Income Donut Chart
@@ -1351,7 +1594,7 @@ $countryChartData = json_encode($countryData);
                             const data = countryDataValue[dataPointIndex];
                             return `<div class="map-tooltip p-2">
                                 <div class="d-flex align-items-center mb-2">
-                                    <img src="https://flagcdn.com/24x18/${data.id}.png" 
+                                    <img src="https://flagcdn.com/256x256/${data.id}.png" 
                                          class="country-flag me-2" 
                                          alt="${data.name}"
                                          onerror="this.onerror=null; this.src='img/flags/globe.png';">
@@ -1409,55 +1652,85 @@ $countryChartData = json_encode($countryData);
             }
         });
         
+        // --- Chart View and Type Toggling ---
+
+        let currentChartView = 'month'; // 'month' or 'year'
+        let currentMonthlyChartType = 'area'; // 'area', 'line', 'bar'
+
         // Toggle between monthly and yearly view
-        $('.btn-group[data-view]').on('click', 'button', function() {
+        $('.btn-group[data-view="timeframe"]').on('click', 'button', function() {
             const $this = $(this);
             const view = $this.data('view');
-            
-            // Toggle active state
+
+            if (view === currentChartView) return; // No change
+
+            currentChartView = view;
             $this.addClass('active').siblings().removeClass('active');
-            
-            // Update chart based on selected view
+
+            // Show/Hide monthly chart type buttons
             if (view === 'year') {
+                $('.btn-group[data-view-type="monthly"]').hide();
                 monthlyChart.updateOptions({
-                    chart: {
-                        type: 'bar'
-                    },
-                    stroke: {
-                        width: [0, 0],
-                        curve: 'smooth'
-                    },
-                    xaxis: {
-                        categories: <?= $yearLabels ?>,
-                    },
-                    series: [{
-                        name: 'Yearly Income',
-                        data: <?= $yearValues ?>
-                    }]
+                    chart: { type: 'bar' }, // Yearly view is always bar
+                    stroke: { width: 0, curve: 'smooth', dashArray: [0] }, // Reset stroke for bar
+                    xaxis: { categories: yearlyLabels },
+                    series: [{ name: 'Yearly Income', data: yearlyValues, type: 'bar' }], // Single series for yearly
+                    colors: ['#3498db'], // Reset colors
+                    fill: { type: 'solid', opacity: 0.8 }, // Solid fill for bar
+                    markers: { size: 0 } // No markers for bar chart
                 });
-            } else {
+            } else { // Switching back to monthly view
+                $('.btn-group[data-view-type="monthly"]').show();
+                // Reapply the selected monthly chart type and original series
                 monthlyChart.updateOptions({
-                    chart: {
-                        type: 'area'
-                    },
-                    stroke: {
-                        width: [3, 3],
-                        curve: 'smooth'
-                    },
-                    xaxis: {
-                        categories: monthNames,
-                    },
-                    series: [{
-                        name: currentYear + ' (Due to Pay)',
-                        data: <?= json_encode($currentYearValues) ?>
-                    }, {
-                        name: previousYear + ' (Due to Pay)',
-                        data: <?= json_encode($previousYearValues) ?>
-                    }]
+                    chart: { type: currentMonthlyChartType },
+                    stroke: { width: [3, 3, 2], curve: 'smooth', dashArray: [0, 0, 5] },
+                    xaxis: { categories: monthNames },
+                    series: [
+                        { name: currentYear + ' (Due to Pay)', data: currentYearData, type: currentMonthlyChartType },
+                        { name: previousYear + ' (Due to Pay)', data: previousYearData, type: currentMonthlyChartType },
+                        { name: '3-Month Moving Avg', data: movingAverageData, type: 'line' } // MA always line
+                    ],
+                    colors: ['#3498db', '#7f8c8d', '#e74c3c'],
+                    fill: currentMonthlyChartType === 'area' ? monthlyChartOptions.fill : { type: 'solid', opacity: 1 }, // Apply gradient only for area
+                    markers: { size: currentMonthlyChartType === 'line' ? 4 : 0 } // Show markers for line chart
                 });
             }
         });
-        
+
+        // Toggle monthly chart type (Area, Line, Bar)
+        $('.btn-group[data-view-type="monthly"]').on('click', 'button', function() {
+            const $this = $(this);
+            const type = $this.data('chart-type');
+
+            if (type === currentMonthlyChartType || currentChartView === 'year') return; // No change or not in monthly view
+
+            currentMonthlyChartType = type;
+            $this.addClass('active').siblings().removeClass('active');
+
+            // Update the chart type and relevant options
+            monthlyChart.updateOptions({
+                chart: { type: type },
+                // Update series types (MA remains line)
+                series: [
+                    { name: currentYear + ' (Due to Pay)', data: currentYearData, type: type },
+                    { name: previousYear + ' (Due to Pay)', data: previousYearData, type: type },
+                    { name: '3-Month Moving Avg', data: movingAverageData, type: 'line' }
+                ],
+                // Adjust fill and markers based on type
+                fill: type === 'area' ? monthlyChartOptions.fill : { type: 'solid', opacity: 1 },
+                markers: { size: type === 'line' ? 4 : 0 }, // Show markers only for line chart
+                stroke: { // Bar charts shouldn't have smoothing```php
+                stroke: { // Bar charts shouldn't have smoothing or dashes usually
+                    width: type === 'bar' ? 0 : [3, 3, 2],
+                    curve: type === 'bar' ? 'straight' : 'smooth',
+                    dashArray: type === 'bar' ? [0] : [0, 0, 5]
+                }
+            }
+        });
+        });
+
+
         // Country Bar Chart
         const countryBarData = <?= json_encode(array_map(function($country) {
             return [
@@ -1646,63 +1919,269 @@ $countryChartData = json_encode($countryData);
       // Get country code utility function for DataTables
     function CSVData(data) {
         this.country = data.country || '';
-        
+
         this.getCountryCode = function() {
+            // Ensure country name is treated case-insensitively for mapping
+            const countryName = typeof this.country === 'string' ? this.country.trim() : '';
+            const lowerCaseCountry = countryName.toLowerCase();
+
+            // Expanded map with lowercase keys for easier lookup
             const countryMap = {
-                'United States': 'us',
-                'United Kingdom': 'gb',
-                'Germany': 'de',
-                'France': 'fr',
-                'Italy': 'it',
-                'Spain': 'es',
-                'Japan': 'jp',
-                'Canada': 'ca',
-                'Australia': 'au',
-                'Brazil': 'br',
-                'Mexico': 'mx',
-                'Russia': 'ru',
-                'China': 'cn',
-                'India': 'in',
-                'South Korea': 'kr',
-                'Netherlands': 'nl',
-                'Sweden': 'se',
-                'Norway': 'no',
-                'Denmark': 'dk',
-                'Poland': 'pl',
-                'Belgium': 'be',
-                'Switzerland': 'ch',
-                'Austria': 'at',
-                // Add 2-letter country codes
-                'US': 'us',
-                'GB': 'gb',
-                'DE': 'de',
-                'FR': 'fr',
-                'IT': 'it',
-                'ES': 'es',
-                'JP': 'jp',
-                'CA': 'ca',
-                'AU': 'au',
-                'BR': 'br',
-                'MX': 'mx',
-                'RU': 'ru',
-                'CN': 'cn',
-                'IN': 'in',
-                'KR': 'kr',
-                'NL': 'nl',
-                'SE': 'se',
-                'NO': 'no',
-                'DK': 'dk',
-                'PL': 'pl',
-                'BE': 'be',
-                'CH': 'ch',
-                'AT': 'at',
-                'XK': 'xk'
+                // Existing + variations
+                'united states': 'us', 'usa': 'us', 'us': 'us',
+                'united kingdom': 'gb', 'uk': 'gb', 'gb': 'gb',
+                'germany': 'de', 'de': 'de',
+                'france': 'fr', 'fr': 'fr',
+                'italy': 'it', 'it': 'it',
+                'spain': 'es', 'es': 'es',
+                'japan': 'jp', 'jp': 'jp',
+                'canada': 'ca', 'ca': 'ca',
+                'australia': 'au', 'au': 'au',
+                'brazil': 'br', 'br': 'br',
+                'mexico': 'mx', 'mx': 'mx',
+                'russia': 'ru', 'ru': 'ru',
+                'china': 'cn', 'cn': 'cn',
+                'india': 'in', 'in': 'in',
+                'south korea': 'kr', 'kr': 'kr',
+                'netherlands': 'nl', 'nl': 'nl',
+                'sweden': 'se', 'se': 'se',
+                'norway': 'no', 'no': 'no',
+                'denmark': 'dk', 'dk': 'dk',
+                'poland': 'pl', 'pl': 'pl',
+                'belgium': 'be', 'be': 'be',
+                'switzerland': 'ch', 'ch': 'ch',
+                'austria': 'at', 'at': 'at',
+                'kosovo': 'xk', 'xk': 'xk',
+
+                // New additions from list (lowercase keys)
+                'ecuador': 'ec', 'ec': 'ec',
+                'colombia': 'co', 'co': 'co',
+                'macedonia': 'mk', 'mk': 'mk', // North Macedonia
+                'greece': 'gr', 'gr': 'gr',
+                'finland': 'fi', 'fi': 'fi',
+                'luxembourg': 'lu', 'lu': 'lu',
+                'croatia': 'hr', 'hr': 'hr',
+                'malta': 'mt', 'mt': 'mt',
+                'romania': 'ro', 'ro': 'ro',
+                'liechtenstein': 'li', 'li': 'li',
+                'slovenia': 'si', 'si': 'si',
+                'hungary': 'hu', 'hu': 'hu',
+                'ireland': 'ie', 'ie': 'ie',
+                'serbia': 'rs', 'rs': 'rs',
+                'czech republic': 'cz', 'cz': 'cz',
+                'bulgaria': 'bg', 'bg': 'bg',
+                'turkey': 'tr', 'tr': 'tr',
+                'slovakia': 'sk', 'sk': 'sk',
+                'united arab emirates': 'ae', 'ae': 'ae',
+                'algeria': 'dz', 'dz': 'dz',
+                'saudi arabia': 'sa', 'sa': 'sa',
+                'israel': 'il', 'il': 'il',
+                'iceland': 'is', 'is': 'is',
+                'portugal': 'pt', 'pt': 'pt',
+                'bosnia and herzegovina': 'ba', 'ba': 'ba',
+                'singapore': 'sg', 'sg': 'sg',
+                'hong kong': 'hk', 'hk': 'hk',
+                'new zealand': 'nz', 'nz': 'nz',
+                'estonia': 'ee', 'ee': 'ee',
+                'kazakhstan': 'kz', 'kz': 'kz',
+                'lithuania': 'lt', 'lt': 'lt',
+                'thailand': 'th', 'th': 'th',
+                'indonesia': 'id', 'id': 'id',
+                'iraq': 'iq', 'iq': 'iq',
+                'qatar': 'qa', 'qa': 'qa',
+                'bahrain': 'bh', 'bh': 'bh',
+                'south africa': 'za', 'za': 'za',
+                'egypt': 'eg', 'eg': 'eg',
+                'cyprus': 'cy', 'cy': 'cy',
+                'morocco': 'ma', 'ma': 'ma',
+                'argentina': 'ar', 'ar': 'ar',
+                'philippines': 'ph', 'ph': 'ph',
+                'chile': 'cl', 'cl': 'cl',
+                'kuwait': 'kw', 'kw': 'kw',
+                'kenya': 'ke', 'ke': 'ke',
+                'guatemala': 'gt', 'gt': 'gt',
+                'taiwan': 'tw', 'tw': 'tw',
+                'tunisia': 'tn', 'tn': 'tn',
+                'vietnam': 'vn', 'vn': 'vn',
+                'aruba': 'aw', 'aw': 'aw',
+                'georgia': 'ge', 'ge': 'ge',
+                'malaysia': 'my', 'my': 'my',
+                'jordan': 'jo', 'jo': 'jo',
+                'ukraine': 'ua', 'ua': 'ua',
+                'azerbaijan': 'az', 'az': 'az',
+                'venezuela': 've', 've': 've',
+                'dominican republic': 'do', 'do': 'do',
+                'bangladesh': 'bd', 'bd': 'bd',
+                'libya': 'ly', 'ly': 'ly',
+                'bolivia': 'bo', 'bo': 'bo',
+                'ghana': 'gh', 'gh': 'gh',
+                'sri lanka': 'lk', 'lk': 'lk',
+                'nigeria': 'ng', 'ng': 'ng',
+                'peru': 'pe', 'pe': 'pe',
+                'pakistan': 'pk', 'pk': 'pk',
+                'paraguay': 'py', 'py': 'py',
+                'albania': 'al', 'al': 'al',
+                'mali': 'ml', 'ml': 'ml',
+                'montenegro': 'me', 'me': 'me',
+                'réunion': 're', 're': 're',
+                'cameroon': 'cm', 'cm': 'cm',
+                'guyana': 'gy', 'gy': 'gy',
+                'uzbekistan': 'uz', 'uz': 'uz',
+                'burkina faso': 'bf', 'bf': 'bf',
+                'greenland': 'gl', 'gl': 'gl',
+                'chad': 'td', 'td': 'td',
+                'costa rica': 'cr', 'cr': 'cr',
+                'gabon': 'ga', 'ga': 'ga',
+                'myanmar': 'mm', 'mm': 'mm', // (Burma)
+                'honduras': 'hn', 'hn': 'hn',
+                'afghanistan': 'af', 'af': 'af',
+                'benin': 'bj', 'bj': 'bj',
+                'panama': 'pa', 'pa': 'pa',
+                'iran': 'ir', 'ir': 'ir',
+                'tanzania': 'tz', 'tz': 'tz',
+                'latvia': 'lv', 'lv': 'lv',
+                'congo - kinshasa': 'cd', 'cd': 'cd', // DRC
+                'lebanon': 'lb', 'lb': 'lb',
+                'ethiopia': 'et', 'et': 'et',
+                'sudan': 'sd', 'sd': 'sd',
+                'monaco': 'mc', 'mc': 'mc',
+                'uruguay': 'uy', 'uy': 'uy',
+                'togo': 'tg', 'tg': 'tg',
+                'mauritius': 'mu', 'mu': 'mu',
+                'tajikistan': 'tj', 'tj': 'tj',
+                'palestine': 'ps', 'ps': 'ps',
+                'mauritania': 'mr', 'mr': 'mr',
+                'côte d’ivoire': 'ci', 'ci': 'ci', // Ivory Coast
+                'turkmenistan': 'tm', 'tm': 'tm',
+                'maldives': 'mv', 'mv': 'mv',
+                'bhutan': 'bt', 'bt': 'bt',
+                'armenia': 'am', 'am': 'am',
+                'nepal': 'np', 'np': 'np',
+                'mongolia': 'mn', 'mn': 'mn',
+                'moldova': 'md', 'md': 'md',
+                'guinea': 'gn', 'gn': 'gn',
+                'el salvador': 'sv', 'sv': 'sv',
+                'mozambique': 'mz', 'mz': 'mz',
+                'uganda': 'ug', 'ug': 'ug',
+                'central african republic': 'cf', 'cf': 'cf',
+                'tokelau': 'tk', 'tk': 'tk',
+                'isle of man': 'im', 'im': 'im',
+                'fiji': 'fj', 'fj': 'fj',
+                'zimbabwe': 'zw', 'zw': 'zw',
+                'somalia': 'so', 'so': 'so',
+                'belarus': 'by', 'by': 'by',
+                'kyrgyzstan': 'kg', 'kg': 'kg',
+                'yemen': 'ye', 'ye': 'ye',
+                'congo - brazzaville': 'cg', 'cg': 'cg', // Republic of Congo
+                'new caledonia': 'nc', 'nc': 'nc',
+                'seychelles': 'sc', 'sc': 'sc',
+                'senegal': 'sn', 'sn': 'sn',
+                'trinidad and tobago': 'tt', 'tt': 'tt',
+                'jamaica': 'jm', 'jm': 'jm',
+                'timor-leste': 'tl', 'tl': 'tl', // East Timor
+                'suriname': 'sr', 'sr': 'sr',
+                'angola': 'ao', 'ao': 'ao',
+                'nicaragua': 'ni', 'ni': 'ni',
+                'liberia': 'lr', 'lr': 'lr',
+                'niger': 'ne', 'ne': 'ne',
+                'gambia': 'gm', 'gm': 'gm',
+                'south sudan': 'ss', 'ss': 'ss',
+                'british virgin islands': 'vg', 'vg': 'vg',
+                'gibraltar': 'gi', 'gi': 'gi',
+                'kiribati': 'ki', 'ki': 'ki',
+                'martinique': 'mq', 'mq': 'mq',
+                'faroe islands': 'fo', 'fo': 'fo',
+                'french polynesia': 'pf', 'pf': 'pf',
+                'u.s. virgin islands': 'vi', 'vi': 'vi',
+                'cayman islands': 'ky', 'ky': 'ky',
+                'botswana': 'bw', 'bw': 'bw',
+                'san marino': 'sm', 'sm': 'sm',
+                'eswatini': 'sz', 'sz': 'sz', // Swaziland
+                'french guiana': 'gf', 'gf': 'gf',
+                'papua new guinea': 'pg', 'pg': 'pg',
+                'marshall islands': 'mh', 'mh': 'mh',
+                'solomon islands': 'sb', 'sb': 'sb',
+                'comoros': 'km', 'km': 'km',
+                'samoa': 'ws', 'ws': 'ws',
+                'bermuda': 'bm', 'bm': 'bm',
+                'guadeloupe': 'gp', 'gp': 'gp',
+                'malawi': 'mw', 'mw': 'mw',
+                'åland islands': 'ax', 'ax': 'ax',
+                'barbados': 'bb', 'bb': 'bb',
+                'lesotho': 'ls', 'ls': 'ls',
+                'brunei': 'bn', 'bn': 'bn',
+                'sierra leone': 'sl', 'sl': 'sl',
+                'djibouti': 'dj', 'dj': 'dj',
+                'northern mariana islands': 'mp', 'mp': 'mp',
+                'guam': 'gu', 'gu': 'gu',
+                'turks and caicos islands': 'tc', 'tc': 'tc',
+                'bahamas': 'bs', 'bs': 'bs',
+                'anguilla': 'ai', 'ai': 'ai',
+                'haiti': 'ht', 'ht': 'ht',
+                'cambodia': 'kh', 'kh': 'kh',
+                'micronesia': 'fm', 'fm': 'fm',
+                'curaçao': 'cw', 'cw': 'cw',
+                'grenada': 'gd', 'gd': 'gd',
+                'equatorial guinea': 'gq', 'gq': 'gq',
+                'jersey': 'je', 'je': 'je',
+                'mayotte': 'yt', 'yt': 'yt',
+                'oman': 'om', 'om': 'om',
+                'macao sar china': 'mo', 'macau': 'mo', 'mo': 'mo',
+                'antigua and barbuda': 'ag', 'ag': 'ag',
+                'american samoa': 'as', 'as': 'as',
+                'syria': 'sy', 'sy': 'sy',
+                'andorra': 'ad', 'ad': 'ad',
+                'zambia': 'zm', 'zm': 'zm',
+                'madagascar': 'mg', 'mg': 'mg',
+                'rwanda': 'rw', 'rw': 'rw',
+                'cape verde': 'cv', 'cv': 'cv',
+                'laos': 'la', 'la': 'la',
+                'guernsey': 'gg', 'gg': 'gg',
+                'belize': 'bz', 'bz': 'bz',
+                'st. kitts and nevis': 'kn', 'kn': 'kn',
+                'puerto rico': 'pr', 'pr': 'pr',
+                'guinea-bissau': 'gw', 'gw': 'gw',
+                'st. lucia': 'lc', 'lc': 'lc',
+                'dominica': 'dm', 'dm': 'dm',
+                'burundi': 'bi', 'bi': 'bi',
+                'montserrat': 'ms', 'ms': 'ms',
+                'vanuatu': 'vu', 'vu': 'vu',
+                'sint maarten': 'sx', 'sx': 'sx',
+                'vatican city': 'va', 'va': 'va',
+                'st. pierre and miquelon': 'pm', 'pm': 'pm',
+                'caribbean netherlands': 'bq', 'bq': 'bq', // Bonaire, Sint Eustatius and Saba
+                'wallis and futuna': 'wf', 'wf': 'wf',
+                'st. vincent and grenadines': 'vc', 'vc': 'vc',
+                'são tomé and príncipe': 'st', 'st': 'st',
+                'cook islands': 'ck', 'ck': 'ck',
+                'palau': 'pw', 'pw': 'pw',
+                'st. martin': 'mf', 'mf': 'mf',
+                'eritrea': 'er', 'er': 'er',
+                'niue': 'nu', 'nu': 'nu',
+                'tonga': 'to', 'to': 'to',
+                'tuvalu': 'tv', 'tv': 'tv',
+                'falkland islands': 'fk', 'fk': 'fk',
             };
-            
-            return countryMap[this.country] || 'globe';
+
+            // Direct mapping first (using lowercase country name)
+            if (countryMap.hasOwnProperty(lowerCaseCountry)) {
+                return countryMap[lowerCaseCountry];
+            }
+
+            // Fallback: If it's a 2-letter code already, assume it's correct if it exists as a value
+            if (lowerCaseCountry.length === 2 && /^[a-z]{2}$/.test(lowerCaseCountry)) {
+                 // Check if it exists in the map values to avoid returning invalid codes
+                 const validCodes = Object.values(countryMap);
+                 if (validCodes.includes(lowerCaseCountry)) {
+                    return lowerCaseCountry;
+                 }
+            }
+
+            // Default fallback
+            return 'globe';
         };
     }
-    
+
     // Initialize DataTables with all the features
     $(document).ready(function() {
         // DataTable for CSV data
@@ -1827,12 +2306,14 @@ $countryChartData = json_encode($countryData);
                         if (type === 'display') {
                             const country = new CSVData({ country: data });
                             const countryCode = country.getCountryCode();
+                            // Use w40 for higher quality table flags, styled by .country-flag CSS
                             return `<span>
-                                <img src="https://flagcdn.com/24x18/${countryCode}.png" 
-                                     class="country-flag" 
-                                     alt="${data}"
-                                     onerror="this.onerror=null; this.src='img/flags/globe.png';">
-                                ${data}
+                                <img src="https://flagcdn.com/w40/${countryCode}.png"
+                                     srcset="https://flagcdn.com/w80/${countryCode}.png 2x"
+                                     class="country-flag"
+                                     alt="${data || 'N/A'}"
+                                     onerror="this.onerror=null; this.src='img/flags/globe.png'; this.srcset='';">
+                                ${data || 'N/A'}
                             </span>`;
                         }
                         return data;
