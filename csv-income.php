@@ -2,6 +2,7 @@
 include 'connection.php';
 include 'header.php';
 include 'sidebar.php';
+
 // Create a class for CSV data
 class CSVData
 {
@@ -55,6 +56,7 @@ class CSVData
         $this->total_due_to_pay_eur = isset($data['total_due_to_pay_eur']) ? $data['total_due_to_pay_eur'] : 0.00;
         $this->date_added = isset($data['date_added']) ? $data['date_added'] : date('Y-m-d H:i:s');
     }
+
     // Get country code for flag display (ISO 3166-1 alpha-2)
     public function getCountryCode()
     {
@@ -111,6 +113,7 @@ class CSVData
             'AT' => 'at',
             'Kosovo' => 'xk',
             'XK' => 'xk', // Added Kosovo
+
             // New additions from list
             'Ecuador' => 'ec',
             'EC' => 'ec',
@@ -528,9 +531,11 @@ class CSVData
             'FK' => 'fk',
             // Add more specific mappings if needed
         ];
+
         // Normalize country name for lookup (trim whitespace, case-insensitive)
         $normalizedCountry = trim($this->country);
         $countryCode = null;
+
         // Try direct match first (case-sensitive for potential exact matches like 'US')
         if (isset($countryMap[$normalizedCountry])) {
             $countryCode = $countryMap[$normalizedCountry];
@@ -543,6 +548,7 @@ class CSVData
                 }
             }
         }
+
         // Fallback logic for missing or invalid country codes
         if (!$countryCode) {
             // If the input itself is a valid 2-letter code in our map values, use it
@@ -556,6 +562,7 @@ class CSVData
                 }
             }
         }
+
         // Final fallback to globe
         if (!$countryCode || !preg_match('/^[a-z]{2}$/', $countryCode)) {
             // Attempt to get first two letters as a last resort before 'globe'
@@ -566,30 +573,37 @@ class CSVData
                 $countryCode = 'globe'; // Default to globe if still invalid or not found
             }
         }
+
         return $countryCode;
     }
 }
+
 // Repository class to handle database operations
 class CSVDataRepository
 {
     private $conn;
+
     public function __construct($conn)
     {
         $this->conn = $conn;
     }
+
     public function getCSVDataByUserId($user_id, $limit = null, $offset = null)
     {
         $sql = "SELECT csv_data.*
                 FROM csv_data
                 WHERE csv_data.client_id = ?
                 ORDER BY csv_data.date_added DESC";
+
         if ($limit !== null) {
             $sql .= " LIMIT ?";
             if ($offset !== null) {
                 $sql .= " OFFSET ?";
             }
         }
+
         $stmt = $this->conn->prepare($sql);
+
         if ($limit !== null && $offset !== null) {
             $stmt->bind_param("iii", $user_id, $limit, $offset);
         } elseif ($limit !== null) {
@@ -597,15 +611,19 @@ class CSVDataRepository
         } else {
             $stmt->bind_param("i", $user_id);
         }
+
         $stmt->execute();
         $result = $stmt->get_result();
+
         $csvData = [];
         while ($row = $result->fetch_assoc()) {
             $csvData[] = new CSVData($row);
         }
+
         $stmt->close();
         return $csvData;
     }
+
     public function getCSVDataSummary($user_id)
     {
         $sql = "SELECT 
@@ -616,14 +634,17 @@ class CSVDataRepository
                     COUNT(DISTINCT country) as unique_countries
                 FROM csv_data
                 WHERE client_id = ?";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $summary = $result->fetch_assoc();
         $stmt->close();
+
         return $summary;
     }
+
     public function getTopPerformingCountries($user_id, $limit = 5)
     {
         $sql = "SELECT 
@@ -635,17 +656,21 @@ class CSVDataRepository
                 GROUP BY country
                 ORDER BY total_income DESC
                 LIMIT ?";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $user_id, $limit);
         $stmt->execute();
         $result = $stmt->get_result();
+
         $countries = [];
         while ($row = $result->fetch_assoc()) {
             $countries[] = $row;
         }
+
         $stmt->close();
         return $countries;
     }
+
     public function getDataForServerSideDatatables($user_id, $start, $length, $search, $order_column, $order_dir)
     {
         // Column mapping for ordering
@@ -660,10 +685,12 @@ class CSVDataRepository
             7 => 'total_eur',
             8 => 'total_due_to_pay_eur'
         ];
+
         // Base query
         $sql = "SELECT SQL_CALC_FOUND_ROWS *
                 FROM csv_data
                 WHERE client_id = ?";
+
         // Add search condition if provided
         if (!empty($search)) {
             $search_term = "%$search%";
@@ -676,15 +703,19 @@ class CSVDataRepository
                         country LIKE ?
                     )";
         }
+
         // Add ordering
         if (isset($columns[$order_column])) {
             $sql .= " ORDER BY " . $columns[$order_column] . " " . $order_dir;
         } else {
             $sql .= " ORDER BY date_added DESC";
         }
+
         // Add pagination
         $sql .= " LIMIT ? OFFSET ?";
+
         $stmt = $this->conn->prepare($sql);
+
         // Bind parameters
         if (!empty($search)) {
             $search_term = "%$search%";
@@ -692,8 +723,10 @@ class CSVDataRepository
         } else {
             $stmt->bind_param("iii", $user_id, $length, $start);
         }
+
         $stmt->execute();
         $result = $stmt->get_result();
+
         // Get total records (without filtering)
         $total_query = "SELECT COUNT(*) as count FROM csv_data WHERE client_id = ?";
         $total_stmt = $this->conn->prepare($total_query);
@@ -701,18 +734,22 @@ class CSVDataRepository
         $total_stmt->execute();
         $total_result = $total_stmt->get_result()->fetch_assoc();
         $recordsTotal = $total_result['count'];
+
         // Get total filtered records
         $filtered_query = "SELECT FOUND_ROWS() as count";
         $filtered_result = $this->conn->query($filtered_query)->fetch_assoc();
         $recordsFiltered = $filtered_result['count'];
+
         // Build data array
         $data = [];
         while ($row = $result->fetch_assoc()) {
             $csvData = new CSVData($row);
             $data[] = $csvData;
         }
+
         $stmt->close();
         $total_stmt->close();
+
         return [
             'data' => $data,
             'recordsTotal' => $recordsTotal,
@@ -720,61 +757,69 @@ class CSVDataRepository
         ];
     }
 }
+
 // Get current user's ID from session
 $user_id = $_SESSION['user_id'];
+
 // Create repository instance and get data
 $csvDataRepo = new CSVDataRepository($conn);
 // Get only limited data for initial display to improve performance
 $initialCsvData = $csvDataRepo->getCSVDataByUserId($user_id, 500000);
 $summary = $csvDataRepo->getCSVDataSummary($user_id);
 $topCountries = $csvDataRepo->getTopPerformingCountries($user_id, 10);
+
 // Get monthly data for chart
 $monthlyData = [];
 $storeData = [];
 $yearlyData = [];
 $currentYear = date('Y');
 $previousYear = $currentYear - 1;
+
 // Initialize monthlyData for all months of current and previous year
 $allMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
+    'Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor',
+    'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'
 ];
+
 foreach ($allMonths as $month) {
     $monthlyData[$currentYear][$month] = 0;
     $monthlyData[$previousYear][$month] = 0;
 }
+
+// Map English month names to Albanian month names for data processing
+$monthMap = [
+    'January' => 'Janar', 'February' => 'Shkurt', 'March' => 'Mars', 'April' => 'Prill',
+    'May' => 'Maj', 'June' => 'Qershor', 'July' => 'Korrik', 'August' => 'Gusht',
+    'September' => 'Shtator', 'October' => 'Tetor', 'November' => 'Nëntor', 'December' => 'Dhjetor'
+];
+
 foreach ($initialCsvData as $data) {
     $period = $data->month . ' ' . $data->year;
     $year = $data->year;
-    $month = $data->month;
+    $month = isset($monthMap[$data->month]) ? $monthMap[$data->month] : $data->month; // Use Albanian month name
+
     // Populate monthly data by year using total_due_to_pay_eur instead of total_eur
     if (!isset($monthlyData[$year][$month])) {
         $monthlyData[$year][$month] = 0;
     }
     $monthlyData[$year][$month] += $data->total_due_to_pay_eur;
+
     // Populate store data using total_due_to_pay_eur
     if (!isset($storeData[$data->store])) {
         $storeData[$data->store] = 0;
     }
     $storeData[$data->store] += $data->total_due_to_pay_eur;
+
     // Aggregate yearly data using total_due_to_pay_eur
     if (!isset($yearlyData[$year])) {
         $yearlyData[$year] = 0;
     }
     $yearlyData[$year] += $data->total_due_to_pay_eur;
 }
+
 // Sort yearly data by year
 ksort($yearlyData);
+
 // Prepare monthly series data for ApexCharts
 $currentYearValues = [];
 $previousYearValues = [];
@@ -782,18 +827,22 @@ foreach ($allMonths as $month) {
     $currentYearValues[] = isset($monthlyData[$currentYear][$month]) ? round($monthlyData[$currentYear][$month], 2) : 0;
     $previousYearValues[] = isset($monthlyData[$previousYear][$month]) ? round($monthlyData[$previousYear][$month], 2) : 0;
 }
+
 // Prepare top 5 stores for donut chart
 arsort($storeData);
 $topStores = array_slice($storeData, 0, 5);
 $otherStores = array_sum(array_slice($storeData, 5));
 if ($otherStores > 0) {
-    $topStores['Others'] = $otherStores;
+    $topStores['Të tjerë'] = $otherStores; // Translate 'Others'
 }
+
 $storeLabels = json_encode(array_keys($topStores));
 $storeValues = json_encode(array_values($topStores));
+
 // Prepare yearly growth data
 $yearLabels = json_encode(array_keys($yearlyData));
 $yearValues = json_encode(array_values($yearlyData));
+
 // Prepare country data for map chart
 $countryData = [];
 foreach ($topCountries as $countryInfo) {
@@ -804,6 +853,7 @@ foreach ($topCountries as $countryInfo) {
 }
 $countryChartData = json_encode($countryData);
 ?>
+
 <style>
     #csvDataTable th,
     #csvDataTable td {
@@ -811,6 +861,7 @@ $countryChartData = json_encode($countryData);
         vertical-align: middle;
         padding: 0.6rem;
     }
+
     #csvDataTable th {
         font-size: 1rem;
         font-weight: 600;
@@ -818,18 +869,22 @@ $countryChartData = json_encode($countryData);
         border-bottom: 2px solid #eee;
         white-space: nowrap;
     }
+
     #csvDataTable td {
         font-size: 0.9rem;
     }
+
     .money-amount {
         font-weight: bold;
         color: #28a745;
         white-space: nowrap;
     }
+
     .money-amount::before {
         content: '€';
         margin-right: 2px;
     }
+
     .store-badge {
         display: inline-flex;
         align-items: center;
@@ -842,10 +897,12 @@ $countryChartData = json_encode($countryData);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         transition: all 0.2s;
     }
+
     .store-badge:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
+
     .store-badge::before {
         content: '';
         display: inline-block;
@@ -854,100 +911,128 @@ $countryChartData = json_encode($countryData);
         border-radius: 50%;
         margin-right: 6px;
     }
+
     .fitvids {
         background-color: #FFE0E3;
         color: #E01E5A;
     }
+
     .fitvids::before {
         background-color: #E01E5A;
     }
+
     .itunes {
         background-color: #EDF5FF;
         color: #007AFF;
     }
+
     .itunes::before {
         background-color: #007AFF;
     }
+
     .spotify {
         background-color: #E8F8EF;
         color: #1DB954;
     }
+
     .spotify::before {
         background-color: #1DB954;
     }
+
     .amazon {
         background-color: #FFF8E0;
         color: #FF9900;
     }
+
     .amazon::before {
         background-color: #FF9900;
     }
+
     .youtube {
         background-color: #FFEEEE;
         color: #FF0000;
     }
+
     .youtube::before {
         background-color: #FF0000;
     }
+
     .tiktok {
         background-color: #F0F2F5;
         color: #000000;
     }
+
     .tiktok::before {
         background-color: #000000;
     }
+
     .deezer {
         background-color: #EEFAFF;
         color: #00C7F2;
     }
+
     .deezer::before {
         background-color: #00C7F2;
     }
+
     .google {
         background-color: #F1F3F4;
         color: #4285F4;
     }
+
     .google::before {
         background-color: #4285F4;
     }
+
     .pandora {
         background-color: #EBF9FF;
         color: #00A0EE;
     }
+
     .pandora::before {
         background-color: #00A0EE;
     }
+
     .soundcloud {
         background-color: #FFF1E6;
         color: #FF5500;
     }
+
     .soundcloud::before {
         background-color: #FF5500;
     }
+
     .tidal {
         background-color: #E6F0FF;
         color: #00FFFF;
     }
+
     .tidal::before {
         background-color: #00FFFF;
     }
+
     .facebook {
         background-color: #E7F3FF;
         color: #1877F2;
     }
+
     .facebook::before {
         background-color: #1877F2;
     }
+
     .instagram {
         background-color: #F8E7FF;
         color: #C13584;
     }
+
     .instagram::before {
         background-color: #C13584;
     }
+
     .table-responsive {
         overflow-x: auto;
     }
+
     .card {
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         border: none;
@@ -956,67 +1041,83 @@ $countryChartData = json_encode($countryData);
         margin-bottom: 1.5rem;
         transition: transform 0.3s, box-shadow 0.3s;
     }
+
     .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
+
     .card-body {
         padding: 1.25rem;
     }
+
     .card-header {
         padding: 1rem 1.25rem;
         font-weight: 600;
         background-color: rgba(0, 0, 0, 0.03);
         border-bottom: 1px solid rgba(0, 0, 0, 0.125);
     }
+
     .main-content {
         padding: 1.5rem;
     }
+
     .fade-in {
         animation: fadeIn ease 0.5s;
     }
+
     .slide-up {
         animation: slideUp ease 0.5s;
     }
+
     @keyframes fadeIn {
         0% {
             opacity: 0;
         }
+
         100% {
             opacity: 1;
         }
     }
+
     @keyframes slideUp {
         0% {
             transform: translateY(20px);
             opacity: 0;
         }
+
         100% {
             transform: translateY(0);
             opacity: 1;
         }
     }
+
     .chart-container {
         position: relative;
         height: 350px;
         width: 100%;
         margin-bottom: 20px;
     }
+
     .mini-chart {
         height: 200px;
     }
+
     .summary-card {
         transition: all 0.3s;
         border-left: 4px solid #007bff;
     }
+
     .summary-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
+
     .summary-icon {
         font-size: 2.5rem;
         opacity: 0.7;
     }
+
     .country-flag {
         width: 24px;
         height: 16px;
@@ -1024,6 +1125,7 @@ $countryChartData = json_encode($countryData);
         border-radius: 2px;
         box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
     }
+
     /* Loading indicator for DataTables */
     .dataTables_processing {
         background-color: rgba(255, 255, 255, 0.9) !important;
@@ -1031,10 +1133,12 @@ $countryChartData = json_encode($countryData);
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
         z-index: 1000 !important;
     }
+
     /* Custom table striping */
     #csvDataTable tbody tr:nth-of-type(odd) {
         background-color: rgba(0, 0, 0, 0.02);
     }
+
     /* Improved filters */
     .dataTables_filter input {
         border: 1px solid #ddd;
@@ -1042,61 +1146,74 @@ $countryChartData = json_encode($countryData);
         padding: 6px 12px;
         margin-left: 8px;
     }
+
     .dataTables_length select {
         border: 1px solid #ddd;
         border-radius: 4px;
         padding: 6px 12px;
         margin: 0 5px;
     }
+
     /* Animation for new data */
     @keyframes highlightRow {
         0% {
             background-color: rgba(92, 184, 92, 0.2);
         }
+
         100% {
             background-color: transparent;
         }
     }
+
     .highlight-new {
         animation: highlightRow 2s ease;
     }
+
     .apexcharts-tooltip {
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
         border: none !important;
     }
+
     .cell-truncate {
         max-width: 150px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
     .world-map-container {
         position: relative;
         height: 400px;
         width: 100%;
     }
+
     .map-legend {
         font-size: 0.875rem;
     }
+
     .legend-item {
         display: inline-flex;
         align-items: center;
         margin-right: 1rem;
     }
+
     .legend-color {
         width: 16px;
         height: 16px;
         border-radius: 50%;
         margin-right: 0.5rem;
     }
+
     .country-item {
         border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         padding: 12px 0;
         margin-bottom: 8px;
     }
+
     .country-item:last-child {
         border-bottom: none;
     }
+
     .country-rank {
         font-size: 18px;
         font-weight: 700;
@@ -1108,60 +1225,70 @@ $countryChartData = json_encode($countryData);
         background-color: #f0f2f5;
         color: #495057;
     }
+
     .country-item:nth-child(1) .country-rank {
         background-color: #ffd700;
         color: #212529;
     }
+
     .country-item:nth-child(2) .country-rank {
         background-color: #c0c0c0;
         color: #212529;
     }
+
     .country-item:nth-child(3) .country-rank {
         background-color: #cd7f32;
         color: #ffffff;
     }
+
     .country-flag-lg {
         width: 32px;
         height: auto;
         border-radius: 3px;
         box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
     }
+
     .country-percentage {
         font-size: 11px;
         padding: 3px 6px;
     }
+
     .country-metrics {
         margin-top: 6px;
         font-size: 13px;
     }
+
     .metric {
         display: flex;
         flex-direction: column;
         text-align: center;
     }
+
     .metric-value {
         font-weight: 600;
         color: #495057;
     }
+
     .metric-label {
         font-size: 11px;
         color: #6c757d;
         margin-top: 2px;
     }
 </style>
+
 <div class="col-md-10 main-content">
     <div class="d-flex justify-content-between align-items-center mb-3 fade-in">
         <div>
-            <h3 class="fw-bold text-primary">CSV Income</h3>
+            <h3 class="fw-bold text-primary">Të Ardhurat CSV</h3>
             <p class="text-muted mb-0">Menaxhoni dhe rishikoni të dhënat e të ardhurave CSV</p>
         </div>
         <div>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshData">
-                <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                <i class="bi bi-arrow-clockwise"></i> Rifresko të Dhënat
             </button>
             <div class="btn-group ms-2">
                 <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-download"></i> Export
+                    <i class="bi bi-download"></i> Eksporto
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="#" id="exportCSV"><i class="bi bi-file-earmark-spreadsheet"></i> CSV</a></li>
@@ -1171,6 +1298,7 @@ $countryChartData = json_encode($countryData);
             </div>
         </div>
     </div>
+
     <!-- Summary Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
@@ -1178,7 +1306,7 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Income Due to Pay</h6>
+                            <h6 class="text-muted mb-1">Të Ardhura për t'u Paguar</h6>
                             <h4 class="mb-0">€<?= number_format($summary['total_due'] ?? 0, 2) ?></h4>
                         </div>
                         <div class="summary-icon text-primary">
@@ -1193,7 +1321,7 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Total Due</h6>
+                            <h6 class="text-muted mb-1">Totali për t'u Paguar</h6>
                             <h4 class="mb-0">€<?= number_format($summary['total_due'] ?? 0, 2) ?></h4>
                         </div>
                         <div class="summary-icon text-success">
@@ -1208,7 +1336,7 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Entries</h6>
+                            <h6 class="text-muted mb-1">Regjistrime</h6>
                             <h4 class="mb-0"><?= number_format($summary['total_entries'] ?? 0) ?></h4>
                         </div>
                         <div class="summary-icon text-info">
@@ -1223,9 +1351,9 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Unique Stores</h6>
+                            <h6 class="text-muted mb-1">Dyqane Unike</h6>
                             <h4 class="mb-0"><?= number_format($summary['unique_stores'] ?? 0) ?></h4>
-                            <div class="small text-muted mt-1"><?= number_format($summary['unique_countries'] ?? 0) ?> countries</div>
+                            <div class="small text-muted mt-1"><?= number_format($summary['unique_countries'] ?? 0) ?> shtete</div>
                         </div>
                         <div class="summary-icon text-warning">
                             <i class="bi bi-shop"></i>
@@ -1235,21 +1363,22 @@ $countryChartData = json_encode($countryData);
             </div>
         </div>
     </div>
+
     <!-- Charts Row -->
     <div class="row mb-4">
         <div class="col-lg-8">
             <div class="card shadow-sm border-0 rounded-lg slide-up">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center flex-wrap">
-                    <h5 class="mb-0 me-2">Monthly Income Trends</h5>
+                    <h5 class="mb-0 me-2">Trendet Mujore të të Ardhurave</h5>
                     <div class="chart-controls d-flex">
                         <div class="btn-group btn-group-sm" data-view-type="monthly">
-                            <button type="button" class="btn btn-outline-secondary active" data-chart-type="area">Area</button>
-                            <button type="button" class="btn btn-outline-secondary" data-chart-type="line">Line</button>
-                            <button type="button" class="btn btn-outline-secondary" data-chart-type="bar">Bar</button>
+                            <button type="button" class="btn btn-outline-secondary active" data-chart-type="area">Zonë</button>
+                            <button type="button" class="btn btn-outline-secondary" data-chart-type="line">Vijë</button>
+                            <button type="button" class="btn btn-outline-secondary" data-chart-type="bar">Shtyllë</button>
                         </div>
                         <div class="btn-group btn-group-sm" data-view="timeframe">
-                            <button type="button" class="btn btn-outline-secondary active" data-view="month">Month</button>
-                            <button type="button" class="btn btn-outline-secondary" data-view="year">Year</button>
+                            <button type="button" class="btn btn-outline-secondary active" data-view="month">Muaj</button>
+                            <button type="button" class="btn btn-outline-secondary" data-view="year">Vit</button>
                         </div>
                     </div>
                 </div>
@@ -1261,7 +1390,7 @@ $countryChartData = json_encode($countryData);
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 rounded-lg slide-up">
                 <div class="card-header bg-light py-2">
-                    <h5 class="mb-0">Income by Store</h5>
+                    <h5 class="mb-0">Të Ardhura sipas Dyqanit</h5>
                 </div>
                 <div class="card-body">
                     <div id="storeIncomeChart" class="chart-container"></div>
@@ -1269,36 +1398,38 @@ $countryChartData = json_encode($countryData);
             </div>
         </div>
     </div>
+
     <!-- Additional Charts Row -->
     <div class="row mb-4">
         <div class="col-lg-8">
-            <div class="card shadow-sm border-0 rounded-lg slide-up">
+            <div class="card shadow-sm border-0 rounded-lg slide-up mb-4">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Global Income Distribution</h5>
-                    <div class="btn-group btn-group-sm" data-map-view>
-                        <button type="button" class="btn btn-outline-secondary active" data-map-view="value">Income Amount</button>
-                        <button type="button" class="btn btn-outline-secondary" data-map-view="count">Entry Count</button>
+                    <h5 class="mb-0">Të gjitha të Dhënat e të Ardhurave CSV</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary" id="refreshDataTable">
+                            <i class="bi bi-arrow-clockwise"></i> Rifresko
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div id="worldMap" class="chart-container world-map-container"></div>
-                    <div class="map-legend mt-2 d-flex justify-content-center">
-                        <span class="legend-item">
-                            <span class="legend-color" style="background-color: #EBF9FF;"></span>
-                            Low
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-color" style="background-color: #B3E0FF;"></span>
-                            Medium
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-color" style="background-color: #66B7FF;"></span>
-                            High
-                        </span>
-                        <span class="legend-item">
-                            <span class="legend-color" style="background-color: #0D6EFD;"></span>
-                            Very High
-                        </span>
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="csvDataTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><span class="header-span">Muaji</span></th>
+                                    <th><span class="header-span">Viti</span></th>
+                                    <th><span class="header-span">Dyqani</span></th>
+                                    <th><span class="header-span">Artisti</span></th>
+                                    <th><span class="header-span">Titulli</span></th>
+                                    <th><span class="header-span">Shteti</span></th>
+                                    <th><span class="header-span">Artikuj</span></th>
+                                    <th><span class="header-span">Për t'u Paguar (€)</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be loaded via DataTables -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1306,10 +1437,10 @@ $countryChartData = json_encode($countryData);
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 rounded-lg slide-up h-100">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Top Performing Countries</h5>
+                    <h5 class="mb-0">Shtetet me Performancën më të Lartë</h5>
                     <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-secondary active" data-country-view="income">Revenue</button>
-                        <button type="button" class="btn btn-outline-secondary" data-country-view="entries">Entries</button>
+                        <button type="button" class="btn btn-outline-secondary active" data-country-view="income">Të Ardhura</button>
+                        <button type="button" class="btn btn-outline-secondary" data-country-view="entries">Regjistrime</button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -1346,17 +1477,17 @@ $countryChartData = json_encode($countryData);
                                 <div class="country-metrics d-flex justify-content-between">
                                     <div class="metric">
                                         <span class="metric-value money-amount"><?= number_format($country['total_income'], 2) ?></span>
-                                        <span class="metric-label">Revenue</span>
+                                        <span class="metric-label">Të Ardhura</span>
                                     </div>
                                     <div class="metric">
                                         <span class="metric-value"><?= number_format($country['entry_count']) ?></span>
-                                        <span class="metric-label">Entries</span>
+                                        <span class="metric-label">Regjistrime</span>
                                     </div>
                                     <div class="metric">
                                         <span class="metric-value <?= $growthClass ?>">
                                             <i class="bi <?= $growthIcon ?> me-1 small"></i><?= $growthValue ?>%
                                         </span>
-                                        <span class="metric-label">Growth</span>
+                                        <span class="metric-label">Rritja</span>
                                     </div>
                                 </div>
                             </div>
@@ -1364,53 +1495,28 @@ $countryChartData = json_encode($countryData);
                     </div>
                     <div class="text-center mt-3">
                         <button class="btn btn-sm btn-outline-primary" id="viewAllCountries">
-                            View All Countries <i class="bi bi-chevron-right"></i>
+                            Shiko të gjitha Shtetet <i class="bi bi-chevron-right"></i>
                         </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <!-- CSV Data Table -->
-    <div class="card shadow-sm border-0 rounded-lg slide-up mb-4">
-        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">All CSV Income Data</h5>
-            <div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-outline-secondary" id="refreshDataTable">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="csvDataTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th><span class="header-span">Month</span></th>
-                            <th><span class="header-span">Year</span></th>
-                            <th><span class="header-span">Store</span></th>
-                            <th><span class="header-span">Artist</span></th>
-                            <th><span class="header-span">Title</span></th>
-                            <th><span class="header-span">Country</span></th>
-                            <th><span class="header-span">Items</span></th>
-                            <th><span class="header-span">Due to Pay (€)</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data will be loaded via DataTables -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+
+
 </div>
+
 <?php include 'footer.php'; ?>
+
 <!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
 <!-- Country flags -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css"></script>
+
 <script>
-    // Initialize DataTables with all the features
     $(document).ready(function() {
         // Store badge color mapping with enhanced styling
         const storeBadgeClasses = {
@@ -1432,26 +1538,30 @@ $countryChartData = json_encode($countryData);
             'Facebook': 'facebook',
             'Instagram': 'instagram'
         };
+
         // Get store CSS class
         function getStoreBadgeClass(store) {
             return storeBadgeClasses[store] || '';
         }
+
         // Format money amount
         function formatMoney(amount) {
-            return new Intl.NumberFormat('de-DE', {
+            return new Intl.NumberFormat('de-DE', { // Use German locale for Euro formatting
                 style: 'currency',
                 currency: 'EUR',
                 minimumFractionDigits: 2
             }).format(amount);
         }
+
         // Monthly Income Apex Chart
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthNames = ['Janar', 'Shkurt', 'Mars', 'Prill', 'Maj', 'Qershor', 'Korrik', 'Gusht', 'Shtator', 'Tetor', 'Nëntor', 'Dhjetor'];
         const currentYear = new Date().getFullYear();
         const previousYear = currentYear - 1;
         const currentYearData = <?= json_encode($currentYearValues) ?>;
         const previousYearData = <?= json_encode($previousYearValues) ?>;
         const yearlyLabels = <?= $yearLabels ?>;
         const yearlyValues = <?= $yearValues ?>;
+
         // Calculate 3-Month Moving Average for Current Year
         function calculateMovingAverage(data, windowSize) {
             if (!data || data.length < windowSize) {
@@ -1467,7 +1577,9 @@ $countryChartData = json_encode($countryData);
             }
             return result;
         }
+
         const movingAverageData = calculateMovingAverage(currentYearData, 3);
+
         // Initial Monthly Chart Options
         let monthlyChartOptions = {
             chart: {
@@ -1500,17 +1612,17 @@ $countryChartData = json_encode($countryData);
                 dashArray: [0, 0, 5]
             }, // Added dash for MA line
             series: [{
-                    name: currentYear + ' (Due to Pay)',
+                    name: currentYear + ' (Për t\'u Paguar)',
                     data: currentYearData,
                     type: 'area'
                 }, // Specify type per series for mixed charts
                 {
-                    name: previousYear + ' (Due to Pay)',
+                    name: previousYear + ' (Për t\'u Paguar)',
                     data: previousYearData,
                     type: 'area'
                 },
                 {
-                    name: '3-Month Moving Avg',
+                    name: 'Mesatarja Levizëse 3-Mujore',
                     data: movingAverageData,
                     type: 'line'
                 } // MA is always a line
@@ -1523,7 +1635,7 @@ $countryChartData = json_encode($countryData);
             },
             yaxis: {
                 title: {
-                    text: 'Due to Pay (€)'
+                    text: 'Për t\'u Paguar (€)'
                 },
                 labels: {
                     formatter: function(val) {
@@ -1563,8 +1675,10 @@ $countryChartData = json_encode($countryData);
                 }
             }
         };
+
         const monthlyChart = new ApexCharts(document.querySelector("#monthlyIncomeChart"), monthlyChartOptions);
         monthlyChart.render();
+
         // Store Income Donut Chart
         const donutChart = new ApexCharts(document.querySelector("#storeIncomeChart"), {
             chart: {
@@ -1611,6 +1725,7 @@ $countryChartData = json_encode($countryData);
                             },
                             total: {
                                 show: true,
+                                label: 'Totali', // Translate 'Total'
                                 formatter: function(w) {
                                     const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
                                     return '€' + parseFloat(total).toFixed(2);
@@ -1642,7 +1757,9 @@ $countryChartData = json_encode($countryData);
                 }
             }]
         });
+
         donutChart.render();
+
         // World Map Visualization
         // Prepare country data
         const countryDataValue = <?= json_encode(array_map(function ($country) {
@@ -1653,6 +1770,7 @@ $countryChartData = json_encode($countryData);
                                             'count' => $country['entry_count']
                                         ];
                                     }, $topCountries)) ?>;
+
         // Initialize vector map
         const worldMapOptions = {
             chart: {
@@ -1705,33 +1823,37 @@ $countryChartData = json_encode($countryData);
                     const data = countryDataValue[dataPointIndex];
                     return `<div class="map-tooltip p-2">
                         <div class="d-flex align-items-center mb-2">
-                            <img src="https://flagcdn.com/24x18/${data.id}.png" 
-                                 class="country-flag me-2" 
+                            <img src="https://flagcdn.com/24x18/${data.id}.png"
+                                 class="country-flag me-2"
                                  alt="${data.name}"
                                  onerror="this.onerror=null; this.src='img/flags/globe.png';">
                             <span class="fw-bold">${data.name}</span>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Total Income:</span>
+                            <span>Të Ardhura Totale:</span>
                             <span class="fw-bold">€${data.value.toLocaleString()}</span>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Entries:</span>
+                            <span>Regjistrime:</span>
                             <span class="fw-bold">${data.count.toLocaleString()}</span>
                         </div>
                     </div>`;
                 }
             }
         };
+
         // Render world map
         const worldMap = new ApexCharts(document.querySelector("#worldMap"), worldMapOptions);
         worldMap.render();
+
         // Toggle map view between income value and entry count
         $('.btn-group[data-map-view]').on('click', 'button', function() {
             const $this = $(this);
             const view = $this.data('map-view');
+
             // Toggle active state
             $this.addClass('active').siblings().removeClass('active');
+
             // Update map based on selected view
             if (view === 'count') {
                 worldMap.updateSeries([{
@@ -1740,10 +1862,11 @@ $countryChartData = json_encode($countryData);
                         y: c.count
                     }))
                 }]);
+
                 worldMap.updateOptions({
                     dataLabels: {
                         formatter: function(text, op) {
-                            return [text, op.value.toLocaleString() + ' entries'];
+                            return [text, op.value.toLocaleString() + ' regjistrime'];
                         }
                     },
                     tooltip: {
@@ -1756,18 +1879,18 @@ $countryChartData = json_encode($countryData);
                             const data = countryDataValue[dataPointIndex];
                             return `<div class="map-tooltip p-2">
                                 <div class="d-flex align-items-center mb-2">
-                                    <img src="https://flagcdn.com/256x256/${data.id}.png" 
-                                         class="country-flag me-2" 
+                                    <img src="https://flagcdn.com/256x256/${data.id}.png"
+                                         class="country-flag me-2"
                                          alt="${data.name}"
                                          onerror="this.onerror=null; this.src='img/flags/globe.png';">
                                     <span class="fw-bold">${data.name}</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <span>Entries:</span>
+                                    <span>Regjistrime:</span>
                                     <span class="fw-bold">${data.count.toLocaleString()}</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <span>Total Income:</span>
+                                    <span>Të Ardhura Totale:</span>
                                     <span class="fw-bold">€${data.value.toLocaleString()}</span>
                                 </div>
                             </div>`;
@@ -1781,6 +1904,7 @@ $countryChartData = json_encode($countryData);
                         y: c.value
                     }))
                 }]);
+
                 worldMap.updateOptions({
                     dataLabels: {
                         formatter: function(text, op) {
@@ -1797,18 +1921,18 @@ $countryChartData = json_encode($countryData);
                             const data = countryDataValue[dataPointIndex];
                             return `<div class="map-tooltip p-2">
                                 <div class="d-flex align-items-center mb-2">
-                                    <img src="https://flagcdn.com/24x18/${data.id}.png" 
-                                         class="country-flag me-2" 
+                                    <img src="https://flagcdn.com/24x18/${data.id}.png"
+                                         class="country-flag me-2"
                                          alt="${data.name}"
                                          onerror="this.onerror=null; this.src='img/flags/globe.png';">
                                     <span class="fw-bold">${data.name}</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <span>Total Income:</span>
+                                    <span>Të Ardhura Totale:</span>
                                     <span class="fw-bold">€${data.value.toLocaleString()}</span>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <span>Entries:</span>
+                                    <span>Regjistrime:</span>
                                     <span class="fw-bold">${data.count.toLocaleString()}</span>
                                 </div>
                             </div>`;
@@ -1817,16 +1941,22 @@ $countryChartData = json_encode($countryData);
                 });
             }
         });
+
         // --- Chart View and Type Toggling ---
+
         let currentChartView = 'month'; // 'month' or 'year'
         let currentMonthlyChartType = 'area'; // 'area', 'line', 'bar'
+
         // Toggle between monthly and yearly view
         $('.btn-group[data-view="timeframe"]').on('click', 'button', function() {
             const $this = $(this);
             const view = $this.data('view');
+
             if (view === currentChartView) return; // No change
+
             currentChartView = view;
             $this.addClass('active').siblings().removeClass('active');
+
             // Show/Hide monthly chart type buttons
             if (view === 'year') {
                 $('.btn-group[data-view-type="monthly"]').hide();
@@ -1843,7 +1973,7 @@ $countryChartData = json_encode($countryData);
                         categories: yearlyLabels
                     },
                     series: [{
-                        name: 'Yearly Income',
+                        name: 'Të Ardhura Vjetore',
                         data: yearlyValues,
                         type: 'bar'
                     }], // Single series for yearly
@@ -1872,17 +2002,17 @@ $countryChartData = json_encode($countryData);
                         categories: monthNames
                     },
                     series: [{
-                            name: currentYear + ' (Due to Pay)',
+                            name: currentYear + ' (Për t\'u Paguar)',
                             data: currentYearData,
                             type: currentMonthlyChartType
                         },
                         {
-                            name: previousYear + ' (Due to Pay)',
+                            name: previousYear + ' (Për t\'u Paguar)',
                             data: previousYearData,
                             type: currentMonthlyChartType
                         },
                         {
-                            name: '3-Month Moving Avg',
+                            name: 'Mesatarja Levizëse 3-Mujore',
                             data: movingAverageData,
                             type: 'line'
                         } // MA always line
@@ -1898,13 +2028,18 @@ $countryChartData = json_encode($countryData);
                 });
             }
         });
+
+        // Toggle monthly chart type (```php
         // Toggle monthly chart type (Area, Line, Bar)
         $('.btn-group[data-view-type="monthly"]').on('click', 'button', function() {
             const $this = $(this);
             const type = $this.data('chart-type');
+
             if (type === currentMonthlyChartType || currentChartView === 'year') return; // No change or not in monthly view
+
             currentMonthlyChartType = type;
             $this.addClass('active').siblings().removeClass('active');
+
             // Update the chart type and relevant options
             monthlyChart.updateOptions({
                 chart: {
@@ -1912,17 +2047,17 @@ $countryChartData = json_encode($countryData);
                 },
                 // Update series types (MA remains line)
                 series: [{
-                        name: currentYear + ' (Due to Pay)',
+                        name: currentYear + ' (Për t\'u Paguar)',
                         data: currentYearData,
                         type: type
                     },
                     {
-                        name: previousYear + ' (Due to Pay)',
+                        name: previousYear + ' (Për t\'u Paguar)',
                         data: previousYearData,
                         type: type
                     },
                     {
-                        name: '3-Month Moving Avg',
+                        name: 'Mesatarja Levizëse 3-Mujore',
                         data: movingAverageData,
                         type: 'line'
                     }
@@ -1935,694 +2070,739 @@ $countryChartData = json_encode($countryData);
                 markers: {
                     size: type === 'line' ? 4 : 0
                 }, // Show markers only for line chart
-                stroke: { // Bar charts shouldn't have smoothing```php
-                    stroke: { // Bar charts shouldn't have smoothing or dashes usually
-                        width: type === 'bar' ? 0 : [3, 3, 2],
-                        curve: type === 'bar' ? 'straight' : 'smooth',
-                        dashArray: type === 'bar' ? [0] : [0, 0, 5]
-                    }
+                stroke: { // Bar charts shouldn't have smoothing or dashes usually
+                    width: type === 'bar' ? 0 : [3, 3, 2],
+                    curve: type === 'bar' ? 'straight' : 'smooth',
+                    dashArray: type === 'bar' ? [0] : [0, 0, 5]
                 }
             });
-            // Country Bar Chart
-            const countryBarData = <?= json_encode(array_map(function ($country) {
-                                        return [
-                                            'country' => $country['country'],
-                                            'income' => round($country['total_income'], 2),
-                                            'entries' => $country['entry_count'],
-                                            'code' => strtolower((new CSVData(['country' => $country['country']]))->getCountryCode())
-                                        ];
-                                    }, $topCountries)) ?>;
-            const countryBarOptions = {
-                chart: {
-                    height: 250,
-                    type: 'bar',
-                    fontFamily: 'inherit',
-                    toolbar: {
-                        show: false
-                    },
-                    animations: {
-                        enabled: true,
-                        easing: 'easeinout',
-                        speed: 800,
-                        animateGradually: {
-                            enabled: true,
-                            delay: 150
-                        }
-                    }
+        });
+
+
+        // Country Bar Chart
+        const countryBarData = <?= json_encode(array_map(function ($country) {
+                                    return [
+                                        'country' => $country['country'],
+                                        'income' => round($country['total_income'], 2),
+                                        'entries' => $country['entry_count'],
+                                        'code' => strtolower((new CSVData(['country' => $country['country']]))->getCountryCode())
+                                    ];
+                                }, $topCountries)) ?>;
+
+        const countryBarOptions = {
+            chart: {
+                height: 250,
+                type: 'bar',
+                fontFamily: 'inherit',
+                toolbar: {
+                    show: false
                 },
-                plotOptions: {
-                    bar: {
-                        horizontal: true,
-                        distributed: true,
-                        dataLabels: {
-                            position: 'top'
-                        },
-                        barHeight: '80%',
-                        colors: {
-                            backgroundBarColors: ['#f8f9fa'],
-                            backgroundBarOpacity: 0.2,
-                        }
-                    }
-                },
-                colors: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'],
-                dataLabels: {
+                animations: {
                     enabled: true,
-                    formatter: function(val) {
-                        return '€' + val.toLocaleString();
+                    easing: 'easeinout',
+                    speed: 800,
+                    animateGradually: {
+                        enabled: true,
+                        delay: 150
+                    }
+                }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: true,
+                    distributed: true,
+                    dataLabels: {
+                        position: 'top'
                     },
-                    style: {
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        colors: ['#495057']
-                    },
-                    offsetX: 30
+                    barHeight: '80%',
+                    colors: {
+                        backgroundBarColors: ['#f8f9fa'],
+                        backgroundBarOpacity: 0.2,
+                    }
+                }
+            },
+            colors: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545', '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'],
+            dataLabels: {
+                enabled: true,
+                formatter: function(val) {
+                    return '€' + val.toLocaleString();
                 },
-                series: [{
-                    name: 'Revenue',
-                    data: countryBarData.map(c => ({
-                        x: c.country,
-                        y: c.income,
-                        fillColor: function() {
-                            // Return a color based on the rank
-                            const colors = ['#0d6efd', '#198754', '#20c997', '#0dcaf0', '#6f42c1', '#fd7e14', '#ffc107', '#20c997', '#6610f2', '#d63384'];
-                            const index = countryBarData.findIndex(country => country.country === c.country);
-                            return colors[index % colors.length];
-                        }()
-                    }))
-                }],
-                tooltip: {
-                    custom: function({
-                        series,
-                        seriesIndex,
-                        dataPointIndex,
-                        w
-                    }) {
-                        const data = countryBarData[dataPointIndex];
-                        return `<div class="p-2">
+                style: {
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    colors: ['#495057']
+                },
+                offsetX: 30
+            },
+            series: [{
+                name: 'Të Ardhura',
+                data: countryBarData.map(c => ({
+                    x: c.country,
+                    y: c.income,
+                    fillColor: function() {
+                        // Return a color based on the rank
+                        const colors = ['#0d6efd', '#198754', '#20c997', '#0dcaf0', '#6f42c1', '#fd7e14', '#ffc107', '#20c997', '#6610f2', '#d63384'];
+                        const index = countryBarData.findIndex(country => country.country === c.country);
+                        return colors[index % colors.length];
+                    }()
+                }))
+            }],
+            tooltip: {
+                custom: function({
+                    series,
+                    seriesIndex,
+                    dataPointIndex,
+                    w
+                }) {
+                    const data = countryBarData[dataPointIndex];
+                    return `<div class="p-2">
                         <div class="d-flex align-items-center mb-2">
-                            <img src="https://flagcdn.com/24x18/${data.code}.png" 
-                                 class="country-flag me-2" 
+                            <img src="https://flagcdn.com/24x18/${data.code}.png"
+                                 class="country-flag me-2"
                                  alt="${data.country}"
                                  onerror="this.onerror=null; this.src='img/flags/globe.png';">
                             <span class="fw-bold">${data.country}</span>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Revenue:</span>
+                            <span>Të Ardhura:</span>
                             <span class="fw-bold">€${data.income.toLocaleString()}</span>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Entries:</span>
+                            <span>Regjistrime:</span>
                             <span class="fw-bold">${data.entries.toLocaleString()}</span>
                         </div>
                     </div>`;
-                    }
-                },
-                xaxis: {
-                    categories: countryBarData.map(c => c.country),
-                    labels: {
-                        formatter: function(val) {
-                            if (val.length > 10) {
-                                return val.substring(0, 10) + '...';
-                            }
-                            return val;
-                        },
-                        style: {
-                            fontSize: '12px'
+                }
+            },
+            xaxis: {
+                categories: countryBarData.map(c => c.country),
+                labels: {
+                    formatter: function(val) {
+                        if (val.length > 10) {
+                            return val.substring(0, 10) + '...';
                         }
+                        return val;
+                    },
+                    style: {
+                        fontSize: '12px'
                     }
-                },
+                }
+            },
+            yaxis: {
+                labels: {
+                    show: false
+                }
+            },
+            grid: {
+                borderColor: '#f1f1f1',
+                strokeDashArray: 4,
                 yaxis: {
-                    labels: {
+                    lines: {
                         show: false
                     }
                 },
-                grid: {
-                    borderColor: '#f1f1f1',
-                    strokeDashArray: 4,
-                    yaxis: {
-                        lines: {
-                            show: false
+                padding: {
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0
+                }
+            }
+        };
+
+        const countryBarChart = new ApexCharts(document.querySelector("#countryBarChart"), countryBarOptions);
+        countryBarChart.render();
+
+        // Toggle country view (revenue vs entries)
+        $('.btn-group button[data-country-view]').on('click', function() {
+            const $this = $(this);
+            const view = $this.data('country-view');
+
+            // Toggle active state
+            $this.addClass('active').siblings().removeClass('active');
+
+            if (view === 'entries') {
+                countryBarChart.updateSeries([{
+                    name: 'Regjistrime',
+                    data: countryBarData.map(c => ({
+                        x: c.country,
+                        y: c.entries
+                    }))
+                }]);
+
+                countryBarChart.updateOptions({
+                    dataLabels: {
+                        formatter: function(val) {
+                            return val.toLocaleString();
                         }
-                    },
-                    padding: {
-                        top: 0,
-                        right: 0,
-                        bottom: 0,
-                        left: 0
                     }
-                }
-            };
-            const countryBarChart = new ApexCharts(document.querySelector("#countryBarChart"), countryBarOptions);
-            countryBarChart.render();
-            // Toggle country view (revenue vs entries)
-            $('.btn-group button[data-country-view]').on('click', function() {
-                const $this = $(this);
-                const view = $this.data('country-view');
-                // Toggle active state
-                $this.addClass('active').siblings().removeClass('active');
-                if (view === 'entries') {
-                    countryBarChart.updateSeries([{
-                        name: 'Entries',
-                        data: countryBarData.map(c => ({
-                            x: c.country,
-                            y: c.entries
-                        }))
-                    }]);
-                    countryBarChart.updateOptions({
-                        dataLabels: {
-                            formatter: function(val) {
-                                return val.toLocaleString();
-                            }
+                });
+            } else {
+                countryBarChart.updateSeries([{
+                    name: 'Të Ardhura',
+                    data: countryBarData.map(c => ({
+                        x: c.country,
+                        y: c.income
+                    }))
+                }]);
+
+                countryBarChart.updateOptions({
+                    dataLabels: {
+                        formatter: function(val) {
+                            return '€' + val.toLocaleString();
                         }
-                    });
-                } else {
-                    countryBarChart.updateSeries([{
-                        name: 'Revenue',
-                        data: countryBarData.map(c => ({
-                            x: c.country,
-                            y: c.income
-                        }))
-                    }]);
-                    countryBarChart.updateOptions({
-                        dataLabels: {
-                            formatter: function(val) {
-                                return '€' + val.toLocaleString();
-                            }
-                        }
-                    });
-                }
-            });
-            // View all countries button
-            $('#viewAllCountries').on('click', function() {
-                // Filter the datatable to show only the countries
-                const uniqueCountries = Array.from(new Set(countryBarData.map(c => c.country)));
-                const filterValue = uniqueCountries.join('|');
-                $('#csvDataTable').DataTable().column(5).search(filterValue, true, false).draw();
-                // Scroll to the datatable
-                $('html, body').animate({
-                    scrollTop: $("#csvDataTable").offset().top - 100
-                }, 500);
-            });
+                    }
+                });
+            }
         });
-        // Get country code utility function for DataTables
-        function CSVData(data) {
-            this.country = data.country || '';
-            this.getCountryCode = function() {
-                // Ensure country name is treated case-insensitively for mapping
-                const countryName = typeof this.country === 'string' ? this.country.trim() : '';
-                const lowerCaseCountry = countryName.toLowerCase();
-                // Expanded map with lowercase keys for easier lookup
-                const countryMap = {
-                    // Existing + variations
-                    'united states': 'us',
-                    'usa': 'us',
-                    'us': 'us',
-                    'united kingdom': 'gb',
-                    'uk': 'gb',
-                    'gb': 'gb',
-                    'germany': 'de',
-                    'de': 'de',
-                    'france': 'fr',
-                    'fr': 'fr',
-                    'italy': 'it',
-                    'it': 'it',
-                    'spain': 'es',
-                    'es': 'es',
-                    'japan': 'jp',
-                    'jp': 'jp',
-                    'canada': 'ca',
-                    'ca': 'ca',
-                    'australia': 'au',
-                    'au': 'au',
-                    'brazil': 'br',
-                    'br': 'br',
-                    'mexico': 'mx',
-                    'mx': 'mx',
-                    'russia': 'ru',
-                    'ru': 'ru',
-                    'china': 'cn',
-                    'cn': 'cn',
-                    'india': 'in',
-                    'in': 'in',
-                    'south korea': 'kr',
-                    'kr': 'kr',
-                    'netherlands': 'nl',
-                    'nl': 'nl',
-                    'sweden': 'se',
-                    'se': 'se',
-                    'norway': 'no',
-                    'no': 'no',
-                    'denmark': 'dk',
-                    'dk': 'dk',
-                    'poland': 'pl',
-                    'pl': 'pl',
-                    'belgium': 'be',
-                    'be': 'be',
-                    'switzerland': 'ch',
-                    'ch': 'ch',
-                    'austria': 'at',
-                    'at': 'at',
-                    'kosovo': 'xk',
-                    'xk': 'xk',
-                    // New additions from list (lowercase keys)
-                    'ecuador': 'ec',
-                    'ec': 'ec',
-                    'colombia': 'co',
-                    'co': 'co',
-                    'macedonia': 'mk',
-                    'mk': 'mk', // North Macedonia
-                    'greece': 'gr',
-                    'gr': 'gr',
-                    'finland': 'fi',
-                    'fi': 'fi',
-                    'luxembourg': 'lu',
-                    'lu': 'lu',
-                    'croatia': 'hr',
-                    'hr': 'hr',
-                    'malta': 'mt',
-                    'mt': 'mt',
-                    'romania': 'ro',
-                    'ro': 'ro',
-                    'liechtenstein': 'li',
-                    'li': 'li',
-                    'slovenia': 'si',
-                    'si': 'si',
-                    'hungary': 'hu',
-                    'hu': 'hu',
-                    'ireland': 'ie',
-                    'ie': 'ie',
-                    'serbia': 'rs',
-                    'rs': 'rs',
-                    'czech republic': 'cz',
-                    'cz': 'cz',
-                    'bulgaria': 'bg',
-                    'bg': 'bg',
-                    'turkey': 'tr',
-                    'tr': 'tr',
-                    'slovakia': 'sk',
-                    'sk': 'sk',
-                    'united arab emirates': 'ae',
-                    'ae': 'ae',
-                    'algeria': 'dz',
-                    'dz': 'dz',
-                    'saudi arabia': 'sa',
-                    'sa': 'sa',
-                    'israel': 'il',
-                    'il': 'il',
-                    'iceland': 'is',
-                    'is': 'is',
-                    'portugal': 'pt',
-                    'pt': 'pt',
-                    'bosnia and herzegovina': 'ba',
-                    'ba': 'ba',
-                    'singapore': 'sg',
-                    'sg': 'sg',
-                    'hong kong': 'hk',
-                    'hk': 'hk',
-                    'new zealand': 'nz',
-                    'nz': 'nz',
-                    'estonia': 'ee',
-                    'ee': 'ee',
-                    'kazakhstan': 'kz',
-                    'kz': 'kz',
-                    'lithuania': 'lt',
-                    'lt': 'lt',
-                    'thailand': 'th',
-                    'th': 'th',
-                    'indonesia': 'id',
-                    'id': 'id',
-                    'iraq': 'iq',
-                    'iq': 'iq',
-                    'qatar': 'qa',
-                    'qa': 'qa',
-                    'bahrain': 'bh',
-                    'bh': 'bh',
-                    'south africa': 'za',
-                    'za': 'za',
-                    'egypt': 'eg',
-                    'eg': 'eg',
-                    'cyprus': 'cy',
-                    'cy': 'cy',
-                    'morocco': 'ma',
-                    'ma': 'ma',
-                    'argentina': 'ar',
-                    'ar': 'ar',
-                    'philippines': 'ph',
-                    'ph': 'ph',
-                    'chile': 'cl',
-                    'cl': 'cl',
-                    'kuwait': 'kw',
-                    'kw': 'kw',
-                    'kenya': 'ke',
-                    'ke': 'ke',
-                    'guatemala': 'gt',
-                    'gt': 'gt',
-                    'taiwan': 'tw',
-                    'tw': 'tw',
-                    'tunisia': 'tn',
-                    'tn': 'tn',
-                    'vietnam': 'vn',
-                    'vn': 'vn',
-                    'aruba': 'aw',
-                    'aw': 'aw',
-                    'georgia': 'ge',
-                    'ge': 'ge',
-                    'malaysia': 'my',
-                    'my': 'my',
-                    'jordan': 'jo',
-                    'jo': 'jo',
-                    'ukraine': 'ua',
-                    'ua': 'ua',
-                    'azerbaijan': 'az',
-                    'az': 'az',
-                    'venezuela': 've',
-                    've': 've',
-                    'dominican republic': 'do',
-                    'do': 'do',
-                    'bangladesh': 'bd',
-                    'bd': 'bd',
-                    'libya': 'ly',
-                    'ly': 'ly',
-                    'bolivia': 'bo',
-                    'bo': 'bo',
-                    'ghana': 'gh',
-                    'gh': 'gh',
-                    'sri lanka': 'lk',
-                    'lk': 'lk',
-                    'nigeria': 'ng',
-                    'ng': 'ng',
-                    'peru': 'pe',
-                    'pe': 'pe',
-                    'pakistan': 'pk',
-                    'pk': 'pk',
-                    'paraguay': 'py',
-                    'py': 'py',
-                    'albania': 'al',
-                    'al': 'al',
-                    'mali': 'ml',
-                    'ml': 'ml',
-                    'montenegro': 'me',
-                    'me': 'me',
-                    'réunion': 're',
-                    're': 're',
-                    'cameroon': 'cm',
-                    'cm': 'cm',
-                    'guyana': 'gy',
-                    'gy': 'gy',
-                    'uzbekistan': 'uz',
-                    'uz': 'uz',
-                    'burkina faso': 'bf',
-                    'bf': 'bf',
-                    'greenland': 'gl',
-                    'gl': 'gl',
-                    'chad': 'td',
-                    'td': 'td',
-                    'costa rica': 'cr',
-                    'cr': 'cr',
-                    'gabon': 'ga',
-                    'ga': 'ga',
-                    'myanmar': 'mm',
-                    'mm': 'mm', // (Burma)
-                    'honduras': 'hn',
-                    'hn': 'hn',
-                    'afghanistan': 'af',
-                    'af': 'af',
-                    'benin': 'bj',
-                    'bj': 'bj',
-                    'panama': 'pa',
-                    'pa': 'pa',
-                    'iran': 'ir',
-                    'ir': 'ir',
-                    'tanzania': 'tz',
-                    'tz': 'tz',
-                    'latvia': 'lv',
-                    'lv': 'lv',
-                    'congo - kinshasa': 'cd',
-                    'cd': 'cd', // DRC
-                    'lebanon': 'lb',
-                    'lb': 'lb',
-                    'ethiopia': 'et',
-                    'et': 'et',
-                    'sudan': 'sd',
-                    'sd': 'sd',
-                    'monaco': 'mc',
-                    'mc': 'mc',
-                    'uruguay': 'uy',
-                    'uy': 'uy',
-                    'togo': 'tg',
-                    'tg': 'tg',
-                    'mauritius': 'mu',
-                    'mu': 'mu',
-                    'tajikistan': 'tj',
-                    'tj': 'tj',
-                    'palestine': 'ps',
-                    'ps': 'ps',
-                    'mauritania': 'mr',
-                    'mr': 'mr',
-                    'côte d’ivoire': 'ci',
-                    'ci': 'ci', // Ivory Coast
-                    'turkmenistan': 'tm',
-                    'tm': 'tm',
-                    'maldives': 'mv',
-                    'mv': 'mv',
-                    'bhutan': 'bt',
-                    'bt': 'bt',
-                    'armenia': 'am',
-                    'am': 'am',
-                    'nepal': 'np',
-                    'np': 'np',
-                    'mongolia': 'mn',
-                    'mn': 'mn',
-                    'moldova': 'md',
-                    'md': 'md',
-                    'guinea': 'gn',
-                    'gn': 'gn',
-                    'el salvador': 'sv',
-                    'sv': 'sv',
-                    'mozambique': 'mz',
-                    'mz': 'mz',
-                    'uganda': 'ug',
-                    'ug': 'ug',
-                    'central african republic': 'cf',
-                    'cf': 'cf',
-                    'tokelau': 'tk',
-                    'tk': 'tk',
-                    'isle of man': 'im',
-                    'im': 'im',
-                    'fiji': 'fj',
-                    'fj': 'fj',
-                    'zimbabwe': 'zw',
-                    'zw': 'zw',
-                    'somalia': 'so',
-                    'so': 'so',
-                    'belarus': 'by',
-                    'by': 'by',
-                    'kyrgyzstan': 'kg',
-                    'kg': 'kg',
-                    'yemen': 'ye',
-                    'ye': 'ye',
-                    'congo - brazzaville': 'cg',
-                    'cg': 'cg', // Republic of Congo
-                    'new caledonia': 'nc',
-                    'nc': 'nc',
-                    'seychelles': 'sc',
-                    'sc': 'sc',
-                    'senegal': 'sn',
-                    'sn': 'sn',
-                    'trinidad and tobago': 'tt',
-                    'tt': 'tt',
-                    'jamaica': 'jm',
-                    'jm': 'jm',
-                    'timor-leste': 'tl',
-                    'tl': 'tl', // East Timor
-                    'suriname': 'sr',
-                    'sr': 'sr',
-                    'angola': 'ao',
-                    'ao': 'ao',
-                    'nicaragua': 'ni',
-                    'ni': 'ni',
-                    'liberia': 'lr',
-                    'lr': 'lr',
-                    'niger': 'ne',
-                    'ne': 'ne',
-                    'gambia': 'gm',
-                    'gm': 'gm',
-                    'south sudan': 'ss',
-                    'ss': 'ss',
-                    'british virgin islands': 'vg',
-                    'vg': 'vg',
-                    'gibraltar': 'gi',
-                    'gi': 'gi',
-                    'kiribati': 'ki',
-                    'ki': 'ki',
-                    'martinique': 'mq',
-                    'mq': 'mq',
-                    'faroe islands': 'fo',
-                    'fo': 'fo',
-                    'french polynesia': 'pf',
-                    'pf': 'pf',
-                    'u.s. virgin islands': 'vi',
-                    'vi': 'vi',
-                    'cayman islands': 'ky',
-                    'ky': 'ky',
-                    'botswana': 'bw',
-                    'bw': 'bw',
-                    'san marino': 'sm',
-                    'sm': 'sm',
-                    'eswatini': 'sz',
-                    'sz': 'sz', // Swaziland
-                    'french guiana': 'gf',
-                    'gf': 'gf',
-                    'papua new guinea': 'pg',
-                    'pg': 'pg',
-                    'marshall islands': 'mh',
-                    'mh': 'mh',
-                    'solomon islands': 'sb',
-                    'sb': 'sb',
-                    'comoros': 'km',
-                    'km': 'km',
-                    'samoa': 'ws',
-                    'ws': 'ws',
-                    'bermuda': 'bm',
-                    'bm': 'bm',
-                    'guadeloupe': 'gp',
-                    'gp': 'gp',
-                    'malawi': 'mw',
-                    'mw': 'mw',
-                    'åland islands': 'ax',
-                    'ax': 'ax',
-                    'barbados': 'bb',
-                    'bb': 'bb',
-                    'lesotho': 'ls',
-                    'ls': 'ls',
-                    'brunei': 'bn',
-                    'bn': 'bn',
-                    'sierra leone': 'sl',
-                    'sl': 'sl',
-                    'djibouti': 'dj',
-                    'dj': 'dj',
-                    'northern mariana islands': 'mp',
-                    'mp': 'mp',
-                    'guam': 'gu',
-                    'gu': 'gu',
-                    'turks and caicos islands': 'tc',
-                    'tc': 'tc',
-                    'bahamas': 'bs',
-                    'bs': 'bs',
-                    'anguilla': 'ai',
-                    'ai': 'ai',
-                    'haiti': 'ht',
-                    'ht': 'ht',
-                    'cambodia': 'kh',
-                    'kh': 'kh',
-                    'micronesia': 'fm',
-                    'fm': 'fm',
-                    'curaçao': 'cw',
-                    'cw': 'cw',
-                    'grenada': 'gd',
-                    'gd': 'gd',
-                    'equatorial guinea': 'gq',
-                    'gq': 'gq',
-                    'jersey': 'je',
-                    'je': 'je',
-                    'mayotte': 'yt',
-                    'yt': 'yt',
-                    'oman': 'om',
-                    'om': 'om',
-                    'macao sar china': 'mo',
-                    'macau': 'mo',
-                    'mo': 'mo',
-                    'antigua and barbuda': 'ag',
-                    'ag': 'ag',
-                    'american samoa': 'as',
-                    'as': 'as',
-                    'syria': 'sy',
-                    'sy': 'sy',
-                    'andorra': 'ad',
-                    'ad': 'ad',
-                    'zambia': 'zm',
-                    'zm': 'zm',
-                    'madagascar': 'mg',
-                    'mg': 'mg',
-                    'rwanda': 'rw',
-                    'rw': 'rw',
-                    'cape verde': 'cv',
-                    'cv': 'cv',
-                    'laos': 'la',
-                    'la': 'la',
-                    'guernsey': 'gg',
-                    'gg': 'gg',
-                    'belize': 'bz',
-                    'bz': 'bz',
-                    'st. kitts and nevis': 'kn',
-                    'kn': 'kn',
-                    'puerto rico': 'pr',
-                    'pr': 'pr',
-                    'guinea-bissau': 'gw',
-                    'gw': 'gw',
-                    'st. lucia': 'lc',
-                    'lc': 'lc',
-                    'dominica': 'dm',
-                    'dm': 'dm',
-                    'burundi': 'bi',
-                    'bi': 'bi',
-                    'montserrat': 'ms',
-                    'ms': 'ms',
-                    'vanuatu': 'vu',
-                    'vu': 'vu',
-                    'sint maarten': 'sx',
-                    'sx': 'sx',
-                    'vatican city': 'va',
-                    'va': 'va',
-                    'st. pierre and miquelon': 'pm',
-                    'pm': 'pm',
-                    'caribbean netherlands': 'bq',
-                    'bq': 'bq', // bonaire, sint eustatius and saba
-                    'wallis and futuna': 'wf',
-                    'wf': 'wf',
-                    'st. vincent and grenadines': 'vc',
-                    'vc': 'vc',
-                    'são tomé and príncipe': 'st',
-                    'st': 'st',
-                    'cook islands': 'ck',
-                    'ck': 'ck',
-                    'palau': 'pw',
-                    'pw': 'pw',
-                    'st. martin': 'mf',
-                    'mf': 'mf',
-                    'eritrea': 'er',
-                    'er': 'er',
-                    'niue': 'nu',
-                    'nu': 'nu',
-                    'tonga': 'to',
-                    'to': 'to',
-                    'tuvalu': 'tv',
-                    'tv': 'tv',
-                    'falkland islands': 'fk',
-                    'fk': 'fk',
-                };
-                // Direct mapping first (using lowercase country name)
-                if (countryMap.hasOwnProperty(lowerCaseCountry)) {
-                    return countryMap[lowerCaseCountry];
-                }
-                // Fallback: If it's a 2-letter code already, assume it's correct if it exists as a value
-                if (lowerCaseCountry.length === 2 && /^[a-z]{2}$/.test(lowerCaseCountry)) {
-                    // Check if it exists in the map values to avoid returning invalid codes
-                    const validCodes = Object.values(countryMap);
-                    if (validCodes.includes(lowerCaseCountry)) {
-                        return lowerCaseCountry;
-                    }
-                }
-                // Default fallback
-                return 'globe';
+
+        // View all countries button
+        $('#viewAllCountries').on('click', function() {
+            // Filter the datatable to show only the countries
+            const uniqueCountries = Array.from(new Set(countryBarData.map(c => c.country)));
+            const filterValue = uniqueCountries.join('|');
+            $('#csvDataTable').DataTable().column(5).search(filterValue, true, false).draw();
+
+            // Scroll to the datatable
+            $('html, body').animate({
+                scrollTop: $("#csvDataTable").offset().top - 100
+            }, 500);
+        });
+    });
+    // Get country code utility function for DataTables
+    function CSVData(data) {
+        this.country = data.country || '';
+
+        this.getCountryCode = function() {
+            // Ensure country name is treated case-insensitively for mapping
+            const countryName = typeof this.country === 'string' ? this.country.trim() : '';
+            const lowerCaseCountry = countryName.toLowerCase();
+
+            // Expanded map with lowercase keys for easier lookup
+            const countryMap = {
+                // Existing + variations
+                'united states': 'us',
+                'usa': 'us',
+                'us': 'us',
+                'united kingdom': 'gb',
+                'uk': 'gb',
+                'gb': 'gb',
+                'germany': 'de',
+                'de': 'de',
+                'france': 'fr',
+                'fr': 'fr',
+                'italy': 'it',
+                'it': 'it',
+                'spain': 'es',
+                'es': 'es',
+                'japan': 'jp',
+                'jp': 'jp',
+                'canada': 'ca',
+                'ca': 'ca',
+                'australia': 'au',
+                'au': 'au',
+                'brazil': 'br',
+                'br': 'br',
+                'mexico': 'mx',
+                'mx': 'mx',
+                'russia': 'ru',
+                'ru': 'ru',
+                'china': 'cn',
+                'cn': 'cn',
+                'india': 'in',
+                'in': 'in',
+                'south korea': 'kr',
+                'kr': 'kr',
+                'netherlands': 'nl',
+                'nl': 'nl',
+                'sweden': 'se',
+                'se': 'se',
+                'norway': 'no',
+                'no': 'no',
+                'denmark': 'dk',
+                'dk': 'dk',
+                'poland': 'pl',
+                'pl': 'pl',
+                'belgium': 'be',
+                'be': 'be',
+                'switzerland': 'ch',
+                'ch': 'ch',
+                'austria': 'at',
+                'at': 'at',
+                'kosovo': 'xk',
+                'xk': 'xk',
+
+                // New additions from list (lowercase keys)
+                'ecuador': 'ec',
+                'ec': 'ec',
+                'colombia': 'co',
+                'co': 'co',
+                'macedonia': 'mk',
+                'mk': 'mk', // North Macedonia
+                'greece': 'gr',
+                'gr': 'gr',
+                'finland': 'fi',
+                'fi': 'fi',
+                'luxembourg': 'lu',
+                'lu': 'lu',
+                'croatia': 'hr',
+                'hr': 'hr',
+                'malta': 'mt',
+                'mt': 'mt',
+                'romania': 'ro',
+                'ro': 'ro',
+                'liechtenstein': 'li',
+                'li': 'li',
+                'slovenia': 'si',
+                'si': 'si',
+                'hungary': 'hu',
+                'hu': 'hu',
+                'ireland': 'ie',
+                'ie': 'ie',
+                'serbia': 'rs',
+                'rs': 'rs',
+                'czech republic': 'cz',
+                'cz': 'cz',
+                'bulgaria': 'bg',
+                'bg': 'bg',
+                'turkey': 'tr',
+                'tr': 'tr',
+                'slovakia': 'sk',
+                'sk': 'sk',
+                'united arab emirates': 'ae',
+                'ae': 'ae',
+                'algeria': 'dz',
+                'dz': 'dz',
+                'saudi arabia': 'sa',
+                'sa': 'sa',
+                'israel': 'il',
+                'il': 'il',
+                'iceland': 'is',
+                'is': 'is',
+                'portugal': 'pt',
+                'pt': 'pt',
+                'bosnia and herzegovina': 'ba',
+                'ba': 'ba',
+                'singapore': 'sg',
+                'sg': 'sg',
+                'hong kong': 'hk',
+                'hk': 'hk',
+                'new zealand': 'nz',
+                'nz': 'nz',
+                'estonia': 'ee',
+                'ee': 'ee',
+                'kazakhstan': 'kz',
+                'kz': 'kz',
+                'lithuania': 'lt',
+                'lt': 'lt',
+                'thailand': 'th',
+                'th': 'th',
+                'indonesia': 'id',
+                'id': 'id',
+                'iraq': 'iq',
+                'iq': 'iq',
+                'qatar': 'qa',
+                'qa': 'qa',
+                'bahrain': 'bh',
+                'bh': 'bh',
+                'south africa': 'za',
+                'za': 'za',
+                'egypt': 'eg',
+                'eg': 'eg',
+                'cyprus': 'cy',
+                'cy': 'cy',
+                'morocco': 'ma',
+                'ma': 'ma',
+                'argentina': 'ar',
+                'ar': 'ar',
+                'philippines': 'ph',
+                'ph': 'ph',
+                'chile': 'cl',
+                'cl': 'cl',
+                'kuwait': 'kw',
+                'kw': 'kw',
+                'kenya': 'ke',
+                'ke': 'ke',
+                'guatemala': 'gt',
+                'gt': 'gt',
+                'taiwan': 'tw',
+                'tw': 'tw',
+                'tunisia': 'tn',
+                'tn': 'tn',
+                'vietnam': 'vn',
+                'vn': 'vn',
+                'aruba': 'aw',
+                'aw': 'aw',
+                'georgia': 'ge',
+                'ge': 'ge',
+                'malaysia': 'my',
+                'my': 'my',
+                'jordan': 'jo',
+                'jo': 'jo',
+                'ukraine': 'ua',
+                'ua': 'ua',
+                'azerbaijan': 'az',
+                'az': 'az',
+                'venezuela': 've',
+                've': 've',
+                'dominican republic': 'do',
+                'do': 'do',
+                'bangladesh': 'bd',
+                'bd': 'bd',
+                'libya': 'ly',
+                'ly': 'ly',
+                'bolivia': 'bo',
+                'bo': 'bo',
+                'ghana': 'gh',
+                'gh': 'gh',
+                'sri lanka': 'lk',
+                'lk': 'lk',
+                'nigeria': 'ng',
+                'ng': 'ng',
+                'peru': 'pe',
+                'pe': 'pe',
+                'pakistan': 'pk',
+                'pk': 'pk',
+                'paraguay': 'py',
+                'py': 'py',
+                'albania': 'al',
+                'al': 'al',
+                'mali': 'ml',
+                'ml': 'ml',
+                'montenegro': 'me',
+                'me': 'me',
+                'réunion': 're',
+                're': 're',
+                'cameroon': 'cm',
+                'cm': 'cm',
+                'guyana': 'gy',
+                'gy': 'gy',
+                'uzbekistan': 'uz',
+                'uz': 'uz',
+                'burkina faso': 'bf',
+                'bf': 'bf',
+                'greenland': 'gl',
+                'gl': 'gl',
+                'chad': 'td',
+                'td': 'td',
+                'costa rica': 'cr',
+                'cr': 'cr',
+                'gabon': 'ga',
+                'ga': 'ga',
+                'myanmar': 'mm',
+                'mm': 'mm', // (Burma)
+                'honduras': 'hn',
+                'hn': 'hn',
+                'afghanistan': 'af',
+                'af': 'af',
+                'benin': 'bj',
+                'bj': 'bj',
+                'panama': 'pa',
+                'pa': 'pa',
+                'iran': 'ir',
+                'ir': 'ir',
+                'tanzania': 'tz',
+                'tz': 'tz',
+                'latvia': 'lv',
+                'lv': 'lv',
+                'congo - kinshasa': 'cd',
+                'cd': 'cd', // Democratic Republic of the Congo
+                'lebanon': 'lb',
+                'lb': 'lb',
+                'ethiopia': 'et',
+                'et': 'et',
+                'sudan': 'sd',
+                'sd': 'sd',
+                'monaco': 'mc',
+                'mc': 'mc',
+                'uruguay': 'uy',
+                'uy': 'uy',
+                'togo': 'tg',
+                'tg': 'tg',
+                'mauritius': 'mu',
+                'mu': 'mu',
+                'tajikistan': 'tj',
+                'tj': 'tj',
+                'palestine': 'ps',
+                'ps': 'ps',
+                'mauritania': 'mr',
+                'mr': 'mr',
+                'côte d’ivoire': 'ci',
+                'ci': 'ci', // Ivory Coast
+                'turkmenistan': 'tm',
+                'tm': 'tm',
+                'maldives': 'mv',
+                'mv': 'mv',
+                'bhutan': 'bt',
+                'bt': 'bt',
+                'armenia': 'am',
+                'am': 'am',
+                'nepal': 'np',
+                'np': 'np',
+                'mongolia': 'mn',
+                'mn': 'mn',
+                'moldova': 'md',
+                'md': 'md',
+                'guinea': 'gn',
+                'gn': 'gn',
+                'el salvador': 'sv',
+                'sv': 'sv',
+                'mozambique': 'mz',
+                'mz': 'mz',
+                'uganda': 'ug',
+                'ug': 'ug',
+                'central african republic': 'cf',
+                'cf': 'cf',
+                'tokelau': 'tk',
+                'tk': 'tk',
+                'isle of man': 'im',
+                'im': 'im',
+                'fiji': 'fj',
+                'fj': 'fj',
+                'zimbabwe': 'zw',
+                'zw': 'zw',
+                'somalia': 'so',
+                'so': 'so',
+                'belarus': 'by',
+                'by': 'by',
+                'kyrgyzstan': 'kg',
+                'kg': 'kg',
+                'yemen': 'ye',
+                'ye': 'ye',
+                'congo - brazzaville': 'cg',
+                'cg': 'cg', // Republic of the Congo
+                'new caledonia': 'nc',
+                'nc': 'nc',
+                'seychelles': 'sc',
+                'sc': 'sc',
+                'senegal': 'sn',
+                'sn': 'sn',
+                'trinidad and tobago': 'tt',
+                'tt': 'tt',
+                'jamaica': 'jm',
+                'jm': 'jm',
+                'timor-leste': 'tl',
+                'tl': 'tl', // East Timor (TP is old code)
+                'suriname': 'sr',
+                'sr': 'sr',
+                'angola': 'ao',
+                'ao': 'ao',
+                'nicaragua': 'ni',
+                'ni': 'ni',
+                'liberia': 'lr',
+                'lr': 'lr',
+                'niger': 'ne',
+                'ne': 'ne',
+                'gambia': 'gm',
+                'gm': 'gm',
+                'south sudan': 'ss',
+                'ss': 'ss',
+                'british virgin islands': 'vg',
+                'vg': 'vg',
+                'gibraltar': 'gi',
+                'gi': 'gi',
+                'kiribati': 'ki',
+                'ki': 'ki',
+                'martinique': 'mq',
+                'mq': 'mq',
+                'faroe islands': 'fo',
+                'fo': 'fo',
+                'french polynesia': 'pf',
+                'pf': 'pf',
+                'u.s. virgin islands': 'vi',
+                'vi': 'vi',
+                'cayman islands': 'ky',
+                'ky': 'ky',
+                'botswana': 'bw',
+                'bw': 'bw',
+                'san marino': 'sm',
+                'sm': 'sm',
+                'eswatini': 'sz',
+                'sz': 'sz', // Swaziland
+                'french guiana': 'gf',
+                'gf': 'gf',
+                'papua new guinea': 'pg',
+                'pg': 'pg',
+                'marshall islands': 'mh',
+                'mh': 'mh',
+                'solomon islands': 'sb',
+                'sb': 'sb',
+                'comoros': 'km',
+                'km': 'km',
+                'samoa': 'ws',
+                'ws': 'ws',
+                'bermuda': 'bm',
+                'bm': 'bm',
+                'guadeloupe': 'gp',
+                'gp': 'gp',
+                'malawi': 'mw',
+                'mw': 'mw',
+                'åland islands': 'ax',
+                'ax': 'ax',
+                'barbados': 'bb',
+                'bb': 'bb',
+                'lesotho': 'ls',
+                'ls': 'ls',
+                'brunei': 'bn',
+                'bn': 'bn',
+                'sierra leone': 'sl',
+                'sl': 'sl',
+                'djibouti': 'dj',
+                'dj': 'dj',
+                'northern mariana islands': 'mp',
+                'mp': 'mp',
+                'guam': 'gu',
+                'gu': 'gu',
+                'turks and caicos islands': 'tc',
+                'tc': 'tc',
+                'bahamas': 'bs',
+                'bs': 'bs',
+                'anguilla': 'ai',
+                'ai': 'ai',
+                'haiti': 'ht',
+                'ht': 'ht',
+                'cambodia': 'kh',
+                'kh': 'kh',
+                'micronesia': 'fm',
+                'fm': 'fm',
+                'curaçao': 'cw',
+                'cw': 'cw',
+                'grenada': 'gd',
+                'gd': 'gd',
+                'equatorial guinea': 'gq',
+                'gq': 'gq',
+                'jersey': 'je',
+                'je': 'je',
+                'mayotte': 'yt',
+                'yt': 'yt',
+                'oman': 'om',
+                'om': 'om',
+                'macao sar china': 'mo',
+                'macau': 'mo',
+                'mo': 'mo',
+                'antigua and barbuda': 'ag',
+                'ag': 'ag',
+                'american samoa': 'as',
+                'as': 'as',
+                'syria': 'sy',
+                'sy': 'sy',
+                'andorra': 'ad',
+                'ad': 'ad',
+                'zambia': 'zm',
+                'zm': 'zm',
+                'madagascar': 'mg',
+                'mg': 'mg',
+                'rwanda': 'rw',
+                'rw': 'rw',
+                'cape verde': 'cv',
+                'cv': 'cv',
+                'laos': 'la',
+                'la': 'la',
+                'guernsey': 'gg',
+                'gg': 'gg',
+                'belize': 'bz',
+                'bz': 'bz',
+                'st. kitts and nevis': 'kn',
+                'kn': 'kn',
+                'puerto rico': 'pr',
+                'pr': 'pr',
+                'guinea-bissau': 'gw',
+                'gw': 'gw',
+                'st. lucia': 'lc',
+                'lc': 'lc',
+                'dominica': 'dm',
+                'dm': 'dm',
+                'burundi': 'bi',
+                'bi': 'bi',
+                'montserrat': 'ms',
+                'ms': 'ms',
+                'vanuatu': 'vu',
+                'vu': 'vu',
+                'sint maarten': 'sx',
+                'sx': 'sx',
+                'vatican city': 'va',
+                'va': 'va',
+                'st. pierre and miquelon': 'pm',
+                'pm': 'pm',
+                'caribbean netherlands': 'bq',
+                'bq': 'bq', // Bonaire, Sint Eustatius and Saba
+                'wallis and futuna': 'wf',
+                'wf': 'wf',
+                'st. vincent and grenadines': 'vc',
+                'vc': 'vc',
+                'são tomé and príncipe': 'st',
+                'st': 'st',
+                'cook islands': 'ck',
+                'ck': 'ck',
+                'palau': 'pw',
+                'pw': 'pw',
+                'st. martin': 'mf',
+                'mf': 'mf',
+                'eritrea': 'er',
+                'er': 'er',
+                'niue': 'nu',
+                'nu': 'nu',
+                'tonga': 'to',
+                'to': 'to',
+                'tuvalu': 'tv',
+                'tv': 'tv',
+                'falkland islands': 'fk',
+                'fk': 'fk',
             };
-        }
+
+            // Direct mapping first (using lowercase country name)
+            if (countryMap.hasOwnProperty(lowerCaseCountry)) {
+                return countryMap[lowerCaseCountry];
+            }
+
+            // Fallback: If it's a 2-letter code already, assume it's correct if it exists as a value
+            if (lowerCaseCountry.length === 2 && /^[a-z]{2}$/.test(lowerCaseCountry)) {
+                // Check if it exists in the map values to avoid returning invalid codes
+                const validCodes = Object.values(countryMap);
+                if (validCodes.includes(lowerCaseCountry)) {
+                    return lowerCaseCountry;
+                }
+            }
+
+            // Default fallback
+            return 'globe';
+        };
+    }
+
+    // Initialize DataTables with all the features
+    $(document).ready(function() {
         // DataTable for CSV data
         const csvTable = $('#csvDataTable').DataTable({
             responsive: true,
             processing: true,
             serverSide: false, // Set to true for large datasets with server-side processing
             pageLength: 25,
+            language: { // Add Albanian language settings
+                "processing": "Duke procesuar...",
+                "lengthMenu": "Shfaq _MENU_ regjistrime për faqe",
+                "zeroRecords": "Nuk u gjet asnjë regjistrim",
+                "info": "Duke shfaqur faqen _PAGE_ nga _PAGES_",
+                "infoEmpty": "Nuk ka regjistrime të disponueshme",
+                "infoFiltered": "(filtruar nga _MAX_ regjistrime totale)",
+                "search": "Kërko:",
+                "paginate": {
+                    "first": "E para",
+                    "last": "E fundit",
+                    "next": "Tjetra",
+                    "previous": "Mëparshmja"
+                },
+                "aria": {
+                    "sortAscending": ": aktivizo për të renditur kolonën në mënyrë rritëse",
+                    "sortDescending": ": aktivizo për të renditur kolonën në mënyrë zbritëse"
+                },
+                "buttons": {
+                    "copy": "Kopjo",
+                    "csv": "CSV",
+                    "excel": "Excel",
+                    "pdf": "PDF",
+                    "print": "Printo"
+                }
+            },
             dom: `
             <'container-fluid'
                 <'row mb-3'
@@ -2644,9 +2824,9 @@ $countryChartData = json_encode($countryData);
                     >
                 >
                 <'row mt-3'
-                    <'col-12 col-md-6'i>
+                    <'col-12 col-md-6'>
                     <'col-12 col-md-6'
-                        <'d-flex justify-content-md-end'p>
+                        <'d-flex justify-content-md-end'>
                     >
                 >
             >`,
@@ -2654,8 +2834,16 @@ $countryChartData = json_encode($countryData);
                 'csv', 'excel', 'pdf', 'print'
             ],
             data: <?php echo json_encode(array_map(function ($item) {
+                        // Map English month names to Albanian for display in the table
+                        $monthMap = [
+                            'January' => 'Janar', 'February' => 'Shkurt', 'March' => 'Mars', 'April' => 'Prill',
+                            'May' => 'Maj', 'June' => 'Qershor', 'July' => 'Korrik', 'August' => 'Gusht',
+                            'September' => 'Shtator', 'October' => 'Tetor', 'November' => 'Nëntor', 'December' => 'Dhjetor'
+                        ];
+                        $displayMonth = isset($monthMap[$item->month]) ? $monthMap[$item->month] : $item->month;
+
                         return [
-                            $item->month,
+                            $displayMonth, // Use Albanian month name
                             $item->year,
                             $item->store,
                             $item->artist,
@@ -2666,28 +2854,28 @@ $countryChartData = json_encode($countryData);
                         ];
                     }, $initialCsvData)); ?>,
             columns: [{
-                    title: 'Month'
+                    title: 'Muaji'
                 },
                 {
-                    title: 'Year'
+                    title: 'Viti'
                 },
                 {
-                    title: 'Store'
+                    title: 'Dyqani'
                 },
                 {
-                    title: 'Artist'
+                    title: 'Artisti'
                 },
                 {
-                    title: 'Title'
+                    title: 'Titulli'
                 },
                 {
-                    title: 'Country'
+                    title: 'Shteti'
                 },
                 {
-                    title: 'Items'
+                    title: 'Artikuj'
                 },
                 {
-                    title: 'Due to Pay (€)'
+                    title: 'Për t\'u Paguar (€)'
                 }
             ],
             columnDefs: [{
@@ -2723,6 +2911,7 @@ $countryChartData = json_encode($countryData);
                             'Facebook': 'facebook',
                             'Instagram': 'instagram'
                         };
+
                         if (type === 'display') {
                             const badgeClass = storeBadgeClasses[data] || '';
                             if (badgeClass) {
@@ -2738,7 +2927,7 @@ $countryChartData = json_encode($countryData);
                     targets: [3, 4],
                     render: function(data, type, row) {
                         if (type === 'display') {
-                            if (data.length > 30) {
+                            if (data && data.length > 30) { // Add check for data existence
                                 return `<span title="${data}" class="cell-truncate">${data.substring(0, 30)}...</span>`;
                             }
                         }
@@ -2768,26 +2957,20 @@ $countryChartData = json_encode($countryData);
                     }
                 },
                 {
-                    // Format numbers - hide zero values
+                    // Format numbers
                     targets: 6,
                     render: function(data, type, row) {
                         if (type === 'display') {
-                            if (parseFloat(data) === 0 || data === 0) {
-                                return '<span class="text-muted">-</span>';
-                            }
-                            return data.toLocaleString();
+                            return data.toLocaleString('sq-AL'); // Use Albanian locale for number formatting
                         }
                         return data;
                     }
                 },
                 {
-                    // Format money - hide zero values
+                    // Format money
                     targets: 7,
                     render: function(data, type, row) {
                         if (type === 'display') {
-                            if (parseFloat(data) === 0 || data === '0.00' || data === '0') {
-                                return '<span class="text-muted">-</span>';
-                            }
                             return `<span class="money-amount">${parseFloat(data).toFixed(2)}</span>`;
                         }
                         return data;
@@ -2795,15 +2978,16 @@ $countryChartData = json_encode($countryData);
                 }
             ],
             order: [
-                [0, 'desc'],
-                [1, 'desc']
+                [1, 'desc'], // Order by Year descending first
+                [0, 'desc']  // Then by Month descending
             ],
             initComplete: function() {
                 $(".dt-buttons").removeClass("dt-buttons btn-group");
-                $(".buttons-csv").addClass("btn btn-light btn-sm me-1");
-                $(".buttons-excel").addClass("btn btn-light btn-sm me-1");
-                $(".buttons-pdf").addClass("btn btn-light btn-sm me-1");
-                $(".buttons-print").addClass("btn btn-light btn-sm");
+                $(".buttons-csv").addClass("btn btn-light btn-sm me-1").text('CSV'); // Translate button text
+                $(".buttons-excel").addClass("btn btn-light btn-sm me-1").text('Excel'); // Translate button text
+                $(".buttons-pdf").addClass("btn btn-light btn-sm me-1").text('PDF'); // Translate button text
+                $(".buttons-print").addClass("btn btn-light btn-sm").text('Printo'); // Translate button text
+
                 $("div.dataTables_length select").addClass("form-select").css({
                     width: 'auto',
                     margin: '0 8px',
@@ -2814,23 +2998,28 @@ $countryChartData = json_encode($countryData);
                 });
             }
         });
+
         // Refresh data table
         $('#refreshDataTable').on('click', function() {
             location.reload();
         });
+
         // Refresh all data
         $('#refreshData').on('click', function() {
             location.reload();
         });
+
         // Export buttons
         $('#exportCSV').on('click', function(e) {
             e.preventDefault();
             $('.buttons-csv').click();
         });
+
         $('#exportExcel').on('click', function(e) {
             e.preventDefault();
             $('.buttons-excel').click();
         });
+
         $('#exportPDF').on('click', function(e) {
             e.preventDefault();
             $('.buttons-pdf').click();
