@@ -19,6 +19,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (md5($password) === $user['fjalkalimi']) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_perdoruesi'] = $user['perdoruesi'];
+                // Store the real name in the session
+                $_SESSION['user_name'] = $user['emri']; 
                 $_SESSION['login_time'] = time();
                 header("Location: dashboard.php");
                 exit();

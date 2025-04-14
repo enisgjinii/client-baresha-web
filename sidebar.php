@@ -9,7 +9,8 @@ $navItems = [
     ['title' => 'CSV Income', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
-$currentUserName = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : "User";
+// Fetch user name from session, default to "User" if not set
+$currentUserName = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : "User"; 
 $sidebarCollapsed = isset($_COOKIE['sidebar_collapsed']) ? $_COOKIE['sidebar_collapsed'] === 'true' : false;
 $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
 ?>
