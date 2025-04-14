@@ -1,12 +1,12 @@
 <?php
 $navItems = [
-    ['title' => 'Dashboard', 'icon' => 'bi-speedometer2', 'url' => 'dashboard.php'],
-    ['title' => 'Invoices', 'icon' => 'bi-receipt', 'url' => 'invoices.php'],
-    ['title' => 'Reports', 'icon' => 'bi-bar-chart', 'url' => 'reports.php'],
-    ['title' => 'Help Center', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
-    ['title' => 'General Contract', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
-    ['title' => 'Song Contract', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
-    ['title' => 'CSV Income', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
+    ['title' => 'Paneli Kryesor', 'icon' => 'bi-speedometer2', 'url' => 'dashboard.php'],
+    ['title' => 'Faturat', 'icon' => 'bi-receipt', 'url' => 'invoices.php'],
+    ['title' => 'Raportet', 'icon' => 'bi-bar-chart', 'url' => 'reports.php'],
+    ['title' => 'Qendra e Ndihmës', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
+    ['title' => 'Kontrata e Përgjithshme', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
+    ['title' => 'Kontrata e Këngës', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
+    ['title' => 'Të Ardhurat CSV', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
 // Fetch user name from session, default to "User" if not set
@@ -50,19 +50,17 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
                 </div>
                 <span class="sidebar-text user-name"><?php echo htmlspecialchars($currentUserName); ?></span>
             </div>
-        </a>
-        <a href="logout.php" class="logout-link">
+        </a>        <a href="logout.php" class="logout-link">
             <i class="bi bi-box-arrow-right"></i>
-            <span class="sidebar-text">Logout</span>
-        </a>
-        <div class="theme-toggle">
-            <button class="theme-option" data-theme="light" title="Light">
+            <span class="sidebar-text">Dilni</span>
+        </a>        <div class="theme-toggle">
+            <button class="theme-option" data-theme="light" title="Ndriçim">
                 <i class="bi bi-sun"></i>
             </button>
-            <button class="theme-option" data-theme="dark" title="Dark">
+            <button class="theme-option" data-theme="dark" title="Errët">
                 <i class="bi bi-moon"></i>
             </button>
-            <button class="theme-option" data-theme="system" title="Auto">
+            <button class="theme-option" data-theme="system" title="Automatik">
                 <i class="bi bi-laptop"></i>
             </button>
         </div>
