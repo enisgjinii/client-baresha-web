@@ -88,7 +88,13 @@ $user_email = isset($_SESSION['user_email']) ? $_SESSION['user_email'] : 'User';
                     <li>
                         <a class="dropdown-item text-center small text-gray-500" href="#">Show All Notifications</a>
                     </li>
-                </ul>
+                </ul>            </li>
+
+            <!-- Dark Mode Toggle -->
+            <li class="nav-item">
+                <button id="theme-toggle" class="btn nav-link px-2" title="Toggle Dark Mode">
+                    <i id="theme-icon" class="bi bi-moon"></i>
+                </button>
             </li>
 
             <!-- Messages Dropdown -->
