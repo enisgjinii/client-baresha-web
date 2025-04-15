@@ -80,7 +80,7 @@ $stmt_payment_type_chart->execute();
 $payment_type_chart_result = $stmt_payment_type_chart->get_result();
 $payment_type_labels = [];
 $payment_type_series = [];
-while ($row = $payment_type_chart_result->fetch_assoc()) {
+while ($row = $payment_type_chart_result->fetch_assoc()) {  
     $payment_type_labels[] = $row['type_of_pay'];
     $payment_type_series[] = $row['count'];
 }
