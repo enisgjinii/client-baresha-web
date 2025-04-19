@@ -1298,7 +1298,7 @@ $countryChartData = json_encode($countryData);
 <div class="col-md-10 main-content">
     <div class="d-flex justify-content-between align-items-center mb-3 fade-in">
         <div>
-            <h3 class="fw-bold text-primary">Të Ardhurat CSV</h3>
+            <h3 class="fw-bold text-primary">Platformat</h3>
             <p class="text-muted mb-0">Menaxhoni dhe rishikoni të dhënat e të ardhurave CSV</p>
         </div>
         <div>

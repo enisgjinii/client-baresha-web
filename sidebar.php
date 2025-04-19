@@ -6,7 +6,7 @@ $navItems = [
     ['title' => 'Qendra e Ndihmës', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
     ['title' => 'Kontrata e Përgjithshme', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
     ['title' => 'Kontrata e Këngës', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
-    ['title' => 'Të Ardhurat CSV', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
+    ['title' => 'Platformat', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
 ];
 $currentPage = basename($_SERVER['PHP_SELF']);
 // Fetch user name from session, default to "User" if not set
