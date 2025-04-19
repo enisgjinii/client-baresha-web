@@ -1325,7 +1325,7 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Të Ardhura për t'u Paguar</h6>
+                            <h6 class="text-muted mb-1">Të Ardhura </h6>
                             <h4 class="mb-0">€<?= number_format($summary['total_due'] ?? 0, 2) ?></h4>
                         </div>
                         <div class="summary-icon text-primary">
@@ -1340,7 +1340,7 @@ $countryChartData = json_encode($countryData);
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h6 class="text-muted mb-1">Totali për t'u Paguar</h6>
+                            <h6 class="text-muted mb-1">Totali </h6>
                             <h4 class="mb-0">€<?= number_format($summary['total_due'] ?? 0, 2) ?></h4>
                         </div>
                         <div class="summary-icon text-success">
@@ -1450,7 +1450,7 @@ $countryChartData = json_encode($countryData);
                                     <th><span class="header-span">Titulli</span></th>
                                     <th><span class="header-span">Shteti</span></th>
                                     <th><span class="header-span">Artikuj</span></th>
-                                    <th><span class="header-span">Për t'u Paguar (€)</span></th>
+                                    <th><span class="header-span"> (€)</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1641,12 +1641,12 @@ $countryChartData = json_encode($countryData);
                 dashArray: [0, 0, 5]
             },
             series: [{
-                    name: currentYear + ' (Për t\'u Paguar)',
+                    name: currentYear,
                     data: currentYearData,
                     type: 'area'
                 },
                 {
-                    name: previousYear + ' (Për t\'u Paguar)',
+                    name: previousYear,
                     data: previousYearData,
                     type: 'area'
                 },
@@ -3047,7 +3047,7 @@ $countryChartData = json_encode($countryData);
             csvTable.rows({
                 search: 'applied'
             }).data().each(function(rowData) {
-                // Access the 'Për t'u Paguar (€)' column data (index 7)
+                // Access the ' (€)' column data (index 7)
                 const amount = parseFloat(rowData[7]) || 0;
                 totalSum += amount;
             });
