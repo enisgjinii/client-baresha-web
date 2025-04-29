@@ -20,19 +20,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_perdoruesi'] = $user['perdoruesi'];
                 // Store the real name in the session
-                $_SESSION['user_name'] = $user['emri']; 
+                $_SESSION['user_name'] = $user['emri'];
                 $_SESSION['login_time'] = time();
                 header("Location: dashboard.php");
                 exit();
             } else {
-                $error_message = "Invalid username or password";
+                $error_message = "Përdoruesi ose fjalëkalimi jo i saktë";
             }
         } else {
-            $error_message = "Invalid username or password";
+            $error_message = "Përdoruesi ose fjalëkalimi jo i saktë";
         }
         $stmt->close();
     } else {
-        $error_message = "System error, please try again later";
+        $error_message = "Gabim në sistem, ju lutemi provoni përsëri më vonë";
         error_log("Error preparing statement: " . $conn->error);
     }
     $conn->close();
@@ -46,17 +46,27 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sq">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM Login</title>
+    <title>Baresha - Hyrja</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: "Inter", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 500;
+            font-style: normal;
+        }
+
         body {
-            background: #fff;
+            background-color: #f9fafb;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -67,11 +77,12 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
 
         .login-container {
             background-color: #fff;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
             max-width: 1000px;
             width: 95%;
+            animation: fadeInUp 0.8s ease forwards;
         }
 
         .login-form {
@@ -79,9 +90,9 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
         }
 
         .login-image {
-            background: #f8f9fa;
-            border-radius: 0 8px 8px 0;
-            border-left: 1px solid #ddd;
+            background: linear-gradient(135deg, #f8f9fa 0%, #edf2f7 100%);
+            border-radius: 0 16px 16px 0;
+            border-left: 1px solid #e2e8f0;
             position: relative;
             overflow: hidden;
         }
@@ -131,11 +142,37 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
 
         .shape {
             position: absolute;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(107, 70, 193, 0.1);
+            border-radius: 50%;
             animation: floatingShapes 20s linear infinite;
         }
 
-        @keyframes containerFadeIn {
+        .shape:nth-child(1) {
+            width: 150px;
+            height: 150px;
+            top: -75px;
+            right: -75px;
+        }
+
+        .shape:nth-child(2) {
+            width: 100px;
+            height: 100px;
+            bottom: 20%;
+            right: 10%;
+            animation-delay: 2s;
+            animation-duration: 25s;
+        }
+
+        .shape:nth-child(3) {
+            width: 80px;
+            height: 80px;
+            bottom: 10%;
+            left: 15%;
+            animation-delay: 5s;
+            animation-duration: 18s;
+        }
+
+        @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(30px);
@@ -150,10 +187,16 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
         @keyframes floatingShapes {
             0% {
                 transform: translateY(0) rotate(0deg);
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 0.3;
             }
 
             100% {
-                transform: translateY(-100vh) rotate(360deg);
+                transform: translateY(-20vh) rotate(360deg);
+                opacity: 0.7;
             }
         }
 
@@ -174,6 +217,29 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
             backdrop-filter: blur(4px);
         }
 
+        .logo-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-container img {
+            height: 50px;
+            width: auto;
+            margin-right: 15px;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            margin-bottom: 0;
+            color: #2D3748;
+            font-size: 1.5rem;
+        }
+
+        .logo-text span {
+            color: #6B46C1;
+        }
+
         @media (max-width: 768px) {
             .login-container {
                 width: 90%;
@@ -183,6 +249,25 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
             .login-form {
                 padding: 2rem;
             }
+
+            .logo-container {
+                justify-content: center;
+            }
+        }
+
+        .form-label {
+            font-weight: 500;
+        }
+
+        .form-floating-text {
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            color: #6B46C1;
+            font-weight: 700;
+            font-size: 2rem;
+            text-shadow: 0 2px 10px rgba(107, 70, 193, 0.2);
+            z-index: 2;
         }
     </style>
 </head>
@@ -191,9 +276,14 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
     <div class="login-container">
         <div class="row g-0">
             <div class="col-lg-6 login-form">
+                <div class="logo-container">
+                    <img src="img/brand-icon.png" alt="Logo e Kompanisë" class="img-fluid">
+                    <h3 class="logo-text">Client <span>Baresha</span></h3>
+                </div>
+
                 <div class="mb-4">
-                    <h2 class="fw-bold" style="color: #2D3748;">Welcome Back</h2>
-                    <p class="text-muted">Sign in to access your CRM dashboard</p>
+                    <h2 class="fw-bold" style="color: #2D3748;">Mirëservini</h2>
+                    <p class="text-muted">Hyni për të përdorur panelin tuaj</p>
                 </div>
                 <?php if (!empty($error_message)): ?>
                     <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -201,9 +291,9 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
                         <?php echo $error_message; ?>
                     </div>
                 <?php endif; ?>
-                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" class="needs-validation" novalidate>
                     <div class="mb-4">
-                        <label for="perdoruesi" class="form-label text-muted mb-2">Username</label>
+                        <label for="perdoruesi" class="form-label text-muted mb-2">Përdoruesi</label>
                         <div class="input-group">
                             <span class="input-group-text border-end-0">
                                 <i class="bi bi-person"></i>
@@ -213,13 +303,13 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
                         </div>
                     </div>
                     <div class="mb-4">
-                        <label for="password" class="form-label text-muted mb-2">Password</label>
+                        <label for="password" class="form-label text-muted mb-2">Fjalëkalimi</label>
                         <div class="input-group">
                             <span class="input-group-text border-end-0">
                                 <i class="bi bi-lock"></i>
                             </span>
                             <input type="password" class="form-control border-start-0" id="password" name="password" required>
-                            <span class="input-group-text border-start-0" id="togglePassword">
+                            <span class="input-group-text border-start-0" id="togglePassword" style="cursor: pointer;">
                                 <i class="bi bi-eye-slash"></i>
                             </span>
                         </div>
@@ -227,21 +317,27 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
                     <div class="mb-4 d-flex justify-content-between align-items-center">
                         <div class="remember-me d-flex align-items-center">
                             <input type="checkbox" id="remember" name="remember" class="form-check-input">
-                            <label for="remember" class="form-check-label text-muted">Remember me</label>
+                            <label for="remember" class="form-check-label text-muted ms-2">Më mbaj mend</label>
                         </div>
-                        <a href="recover_password.php" class="text-decoration-none" style="color: #6B46C1;">Forgot password?</a>
+                        <!-- <a href="recover_password.php" class="text-decoration-none" style="color: #6B46C1; font-weight: 500;">Keni harruar fjalëkalimin?</a> -->
                     </div>
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Sign In</button>
+                        <button type="submit" class="btn btn-primary">Hyni</button>
                     </div>
                 </form>
             </div>
             <div class="col-lg-6 login-image d-none d-lg-block">
                 <div class="floating-shapes">
                     <div class="shape"></div>
+                    <div class="shape"></div>
+                    <div class="shape"></div>
+                </div>
+                <div class="form-floating-text">
+                    Client Baresha<br>
+                    <span style="font-size: 1.5rem; font-weight: 500;">Menaxhimi i Marrëdhënieve me Klientë</span>
                 </div>
                 <div class="h-100 d-flex align-items-center justify-content-center">
-                    <img src="assets/login-illustration.svg" alt="CRM Illustration" class="img-fluid p-5" style="max-width: 100%; z-index: 1;">
+                    <!-- Illustration removed -->
                 </div>
             </div>
         </div>
@@ -261,6 +357,21 @@ if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600))
                 icon.classList.add('bi-eye-slash');
             }
         });
+
+        // Form validation
+        (function() {
+            'use strict'
+            const forms = document.querySelectorAll('.needs-validation')
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
     </script>
 </body>
 
