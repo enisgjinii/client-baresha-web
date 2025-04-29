@@ -96,7 +96,7 @@ if ($result->num_rows > 0) {
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="d-flex align-items-center">
                 <div class="logo me-2">
-                    <img src="images/brand-icon.png" alt="Company Logo" width="60">
+                    <img src="img/brand-icon.png" alt="Company Logo" width="60">
                 </div>
                 <div>
                     <h5 class="mb-0">Baresha Network</h5>
