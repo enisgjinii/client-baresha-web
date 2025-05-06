@@ -29,8 +29,8 @@ header("X-Frame-Options: DENY");
 header("X-XSS-Protection: 1; mode=block");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: strict-origin-when-cross-origin");
-// Update Content-Security-Policy to allow external flag images
-header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://stackpath.bootstrapcdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' https://flagcdn.com data:;");
+// Update Content-Security-Policy to allow external flag images and YouTube images
+header("Content-Security-Policy: default-src 'self'; script-src 'self' https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://stackpath.bootstrapcdn.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' https://flagcdn.com https://yt3.ggpht.com https://*.ytimg.com data:;");
 ?>
 <!DOCTYPE html>
 <html lang="en">
