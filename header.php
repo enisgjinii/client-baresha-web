@@ -4,7 +4,7 @@ ini_set('session.cookie_httponly', 1);
 ini_set('session.cookie_secure', 1);
 ini_set('session.use_only_cookies', 1);
 ini_set('session.cookie_samesite', 'Strict');
-session_set_cookie_params(3600, '/', null, true, true);
+session_set_cookie_params(86400, '/', null, true, true); // Changed from 3600 to 86400 (24 hours)
 session_start();
 
 // Security check

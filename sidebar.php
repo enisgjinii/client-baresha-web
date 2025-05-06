@@ -560,7 +560,7 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
         // Session security monitoring
         let inactivityTime = function() {
             let time;
-            const maxInactivityTime = 30 * 60 * 1000;
+            const maxInactivityTime = 24 * 60 * 60 * 1000; // Changed from 30 minutes to 24 hours
             
             const resetTimer = function() {
                 clearTimeout(time);

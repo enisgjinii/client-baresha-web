@@ -1,5 +1,5 @@
 <?php
-session_set_cookie_params(3600);
+session_set_cookie_params(86400); // Changed from 3600 to 86400 (24 hours)
 session_start();
 
 $error_message = "";
@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->close();
 }
 
-if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 3600)) {
+if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 86400)) {  // Changed from 3600 to 86400 (24 hours)
     session_unset();
     session_destroy();
     header("Location: " . $_SERVER["PHP_SELF"]);
