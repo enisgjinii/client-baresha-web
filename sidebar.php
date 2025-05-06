@@ -3,7 +3,7 @@ $navItems = [
     ['title' => 'Paneli Kryesor', 'icon' => 'bi-speedometer2', 'url' => 'dashboard.php'],
     ['title' => 'Faturat', 'icon' => 'bi-receipt', 'url' => 'invoices.php'],
     ['title' => 'Raportet', 'icon' => 'bi-bar-chart', 'url' => 'reports.php'],
-    ['title' => 'Qendra e Ndihmës', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
+    // ['title' => 'Qendra e Ndihmës', 'icon' => 'bi-question-circle', 'url' => 'help-center.php'],
     ['title' => 'Kontrata e Përgjithshme', 'icon' => 'bi-file-earmark-medical', 'url' => 'general-contract.php'],
     ['title' => 'Kontrata e Këngës', 'icon' => 'bi-file-earmark-music', 'url' => 'song-contract.php'],
     ['title' => 'Platformat', 'icon' => 'bi-file-earmark-spreadsheet', 'url' => 'csv-income.php'],
@@ -50,7 +50,13 @@ $sidebarClass = $sidebarCollapsed ? 'sidebar-collapsed' : '';
                 </div>
                 <span class="sidebar-text user-name"><?php echo htmlspecialchars($currentUserName); ?></span>
             </div>
-        </a>        <a href="logout.php" class="logout-link">
+        </a>        
+        <!-- Qendra e ndihmes put here -->
+        <a href="help-center.php" class="user-link">
+            <i class="bi bi-question-circle"></i>
+            <span class="sidebar-text">Qendra e Ndihmës</span>
+        </a>
+        <a href="logout.php" class="logout-link">
             <i class="bi bi-box-arrow-right"></i>
             <span class="sidebar-text">Dilni</span>
         </a>        <div class="theme-toggle">
