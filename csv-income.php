@@ -1300,6 +1300,11 @@ $countryChartData = json_encode($countryData);
         <div>
             <h3 class="fw-bold text-primary">Platformat</h3>
             <p class="text-muted mb-0">Menaxhoni dhe rishikoni të dhënat e të ardhurave CSV</p>
+            <p>
+                <!-- Print ID of client -->
+                <span class="badge bg-secondary">Numri identifikues i juaji ne sistem : <?= $user_id ?></span>
+            </p>
+
         </div>
         <div>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshData">
@@ -1319,7 +1324,7 @@ $countryChartData = json_encode($countryData);
     </div>
 
     <!-- Summary Cards -->
-    <div class="row mb-4">
+    <!-- <div class="row mb-4">
         <div class="col-md-3">
             <div class="card shadow-sm border-0 rounded-lg slide-up summary-card">
                 <div class="card-body">
@@ -1381,7 +1386,7 @@ $countryChartData = json_encode($countryData);
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Charts Row -->
     <div class="row mb-4">
@@ -1509,10 +1514,6 @@ $countryChartData = json_encode($countryData);
                                         <span class="metric-label">Të Ardhura</span>
                                     </div>
                                     <div class="metric">
-                                        <span class="metric-value"><?= number_format($country['entry_count']) ?></span>
-                                        <span class="metric-label">Regjistrime</span>
-                                    </div>
-                                    <div class="metric">
                                         <span class="metric-value <?= $growthClass ?>">
                                             <i class="bi <?= $growthIcon ?> me-1 small"></i><?= $growthValue ?>%
                                         </span>
@@ -1541,7 +1542,6 @@ $countryChartData = json_encode($countryData);
 
 <!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
 <!-- Country flags -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css"></script>
 
@@ -1730,7 +1730,7 @@ $countryChartData = json_encode($countryData);
             },
             series: <?= $storeValues ?>,
             labels: <?= $storeLabels ?>,
-            colors: ['#2ecc71', '#3498db', '#9b59b6', '#e74c3c', '#f39c12', '#1abc9c', '#34495e'],
+            colors: ['#FF0000', '#1DB954', '#000000', '#007AFF', '#4267B2', '#9b59b6', '#e74c3c', '#f39c12', '#1abc9c', '#34495e'], // Updated colors for YouTube, Spotify, TikTok, Apple, Meta, and others
             legend: {
                 position: 'bottom',
                 horizontalAlign: 'center',
@@ -1862,10 +1862,6 @@ $countryChartData = json_encode($countryData);
                             <span>Të Ardhura Totale:</span>
                             <span class="fw-bold">€${data.value.toLocaleString()}</span>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Regjistrime:</span>
-                            <span class="fw-bold">${data.count.toLocaleString()}</span>
-                        </div>
                     </div>`;
                 }
             }
@@ -1959,10 +1955,6 @@ $countryChartData = json_encode($countryData);
                                 <div class="d-flex justify-content-between">
                                     <span>Të Ardhura Totale:</span>
                                     <span class="fw-bold">€${data.value.toLocaleString()}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Regjistrime:</span>
-                                    <span class="fw-bold">${data.count.toLocaleString()}</span>
                                 </div>
                             </div>`;
                         }
@@ -2188,16 +2180,12 @@ $countryChartData = json_encode($countryData);
                             <img src="https://flagcdn.com/24x18/${data.code}.png"
                                  class="country-flag me-2"
                                  alt="${data.country}"
-                                 onerror="this.onerror=null; this.src='img/flags/globe.png';">
+                                 onerror="this.onerror=null; this.src='img/flags/globe.png'; this.srcset='';">
                             <span class="fw-bold">${data.country}</span>
                         </div>
                         <div class="d-flex justify-content-between">
                             <span>Të Ardhura:</span>
                             <span class="fw-bold">€${data.income.toLocaleString()}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Regjistrime:</span>
-                            <span class="fw-bold">${data.entries.toLocaleString()}</span>
                         </div>
                     </div>`;
                 }
