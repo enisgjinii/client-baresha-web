@@ -13,13 +13,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Session validation
-if (isset($_SESSION['last_ip']) && $_SESSION['last_ip'] !== $_SERVER['REMOTE_ADDR']) {
-    session_unset();
-    session_destroy();
-    header("Location: login.php?error=security");
-    exit;
-}
+
 
 $_SESSION['last_ip'] = $_SERVER['REMOTE_ADDR'];
 $user_id = $_SESSION['user_id'];
