@@ -309,7 +309,7 @@ class CSVData
             'PS' => 'ps',
             'Mauritania' => 'mr',
             'MR' => 'mr',
-            'Côte d’Ivoire' => 'ci',
+            'Côte d\'ivoire' => 'ci',
             'CI' => 'ci', // Ivory Coast
             'Turkmenistan' => 'tm',
             'TM' => 'tm',
@@ -756,6 +756,104 @@ class CSVDataRepository
             'recordsFiltered' => $recordsFiltered
         ];
     }
+
+    // New method to get monthly data for charts
+    public function getMonthlyChartData($user_id, $currentYear, $previousYear)
+    {
+        $monthlyData = [];
+        
+        // Initialize data structure
+        foreach ([$currentYear, $previousYear] as $year) {
+            $monthlyData[$year] = [
+                'Janar' => 0, 'Shkurt' => 0, 'Mars' => 0, 'Prill' => 0,
+                'Maj' => 0, 'Qershor' => 0, 'Korrik' => 0, 'Gusht' => 0,
+                'Shtator' => 0, 'Tetor' => 0, 'Nëntor' => 0, 'Dhjetor' => 0
+            ];
+        }
+        
+        // Map English month names to Albanian
+        $monthMap = [
+            'January' => 'Janar',
+            'February' => 'Shkurt',
+            'March' => 'Mars',
+            'April' => 'Prill',
+            'May' => 'Maj',
+            'June' => 'Qershor',
+            'July' => 'Korrik',
+            'August' => 'Gusht',
+            'September' => 'Shtator',
+            'October' => 'Tetor',
+            'November' => 'Nëntor',
+            'December' => 'Dhjetor'
+        ];
+        
+        // Query for monthly data
+        $sql = "SELECT year, month, SUM(total_due_to_pay_eur) as total
+                FROM csv_data
+                WHERE client_id = ? AND year IN (?, ?)
+                GROUP BY year, month
+                ORDER BY year, FIELD(month, 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December')";
+                
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("iii", $user_id, $currentYear, $previousYear);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $year = $row['year'];
+            $month = isset($monthMap[$row['month']]) ? $monthMap[$row['month']] : $row['month'];
+            $monthlyData[$year][$month] = round($row['total'], 2);
+        }
+        
+        $stmt->close();
+        return $monthlyData;
+    }
+    
+    // New method to get store data for charts
+    public function getStoreChartData($user_id)
+    {
+        $sql = "SELECT store, SUM(total_due_to_pay_eur) as total
+                FROM csv_data
+                WHERE client_id = ?
+                GROUP BY store
+                ORDER BY total DESC";
+                
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $storeData = [];
+        while ($row = $result->fetch_assoc()) {
+            $storeData[$row['store']] = round($row['total'], 2);
+        }
+        
+        $stmt->close();
+        return $storeData;
+    }
+    
+    // New method to get yearly data for charts
+    public function getYearlyChartData($user_id)
+    {
+        $sql = "SELECT year, SUM(total_due_to_pay_eur) as total
+                FROM csv_data
+                WHERE client_id = ?
+                GROUP BY year
+                ORDER BY year ASC";
+                
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $yearlyData = [];
+        while ($row = $result->fetch_assoc()) {
+            $yearlyData[$row['year']] = round($row['total'], 2);
+        }
+        
+        $stmt->close();
+        return $yearlyData;
+    }
 }
 
 // Get current user's ID from session
@@ -763,19 +861,27 @@ $user_id = $_SESSION['user_id'];
 
 // Create repository instance and get data
 $csvDataRepo = new CSVDataRepository($conn);
+
 // Get only limited data for initial display to improve performance
-$initialCsvData = $csvDataRepo->getCSVDataByUserId($user_id, 500000);
+$initialCsvData = $csvDataRepo->getCSVDataByUserId($user_id, 1000); // Reduced from 500000 to 1000
 $summary = $csvDataRepo->getCSVDataSummary($user_id);
 $topCountries = $csvDataRepo->getTopPerformingCountries($user_id, 10);
 
-// Get monthly data for chart
-$monthlyData = [];
-$storeData = [];
-$yearlyData = [];
+// Get monthly data for chart using optimized query
 $currentYear = date('Y');
 $previousYear = $currentYear - 1;
+$monthlyData = $csvDataRepo->getMonthlyChartData($user_id, $currentYear, $previousYear);
 
-// Initialize monthlyData for all months of current and previous year
+// Get store data for donut chart using optimized query
+$storeData = $csvDataRepo->getStoreChartData($user_id);
+
+// Get yearly data for chart using optimized query
+$yearlyData = $csvDataRepo->getYearlyChartData($user_id);
+
+// Sort yearly data by year
+ksort($yearlyData);
+
+// Prepare monthly series data for ApexCharts
 $allMonths = [
     'Janar',
     'Shkurt',
@@ -791,55 +897,6 @@ $allMonths = [
     'Dhjetor'
 ];
 
-foreach ($allMonths as $month) {
-    $monthlyData[$currentYear][$month] = 0;
-    $monthlyData[$previousYear][$month] = 0;
-}
-
-// Map English month names to Albanian month names for data processing
-$monthMap = [
-    'January' => 'Janar',
-    'February' => 'Shkurt',
-    'March' => 'Mars',
-    'April' => 'Prill',
-    'May' => 'Maj',
-    'June' => 'Qershor',
-    'July' => 'Korrik',
-    'August' => 'Gusht',
-    'September' => 'Shtator',
-    'October' => 'Tetor',
-    'November' => 'Nëntor',
-    'December' => 'Dhjetor'
-];
-
-foreach ($initialCsvData as $data) {
-    $period = $data->month . ' ' . $data->year;
-    $year = $data->year;
-    $month = isset($monthMap[$data->month]) ? $monthMap[$data->month] : $data->month; // Use Albanian month name
-
-    // Populate monthly data by year using total_due_to_pay_eur instead of total_eur
-    if (!isset($monthlyData[$year][$month])) {
-        $monthlyData[$year][$month] = 0;
-    }
-    $monthlyData[$year][$month] += $data->total_due_to_pay_eur;
-
-    // Populate store data using total_due_to_pay_eur
-    if (!isset($storeData[$data->store])) {
-        $storeData[$data->store] = 0;
-    }
-    $storeData[$data->store] += $data->total_due_to_pay_eur;
-
-    // Aggregate yearly data using total_due_to_pay_eur
-    if (!isset($yearlyData[$year])) {
-        $yearlyData[$year] = 0;
-    }
-    $yearlyData[$year] += $data->total_due_to_pay_eur;
-}
-
-// Sort yearly data by year
-ksort($yearlyData);
-
-// Prepare monthly series data for ApexCharts
 $currentYearValues = [];
 $previousYearValues = [];
 foreach ($allMonths as $month) {
@@ -1543,7 +1600,7 @@ $countryChartData = json_encode($countryData);
 <!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <!-- Country flags -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.5.0/css/flag-icon.min.css">
 
 <script>
     $(document).ready(function() {
@@ -2543,7 +2600,7 @@ $countryChartData = json_encode($countryData);
                 'ps': 'ps',
                 'mauritania': 'mr',
                 'mr': 'mr',
-                'côte d’ivoire': 'ci',
+                'côte d\'ivoire': 'ci',
                 'ci': 'ci', // Ivory Coast
                 'turkmenistan': 'tm',
                 'tm': 'tm',
@@ -2791,8 +2848,8 @@ $countryChartData = json_encode($countryData);
         const csvTable = $('#csvDataTable').DataTable({
             responsive: true,
             processing: true,
-            serverSide: false, // Set to true for large datasets with server-side processing
-            pageLength: 25, // You might want to increase this or use -1 to show all if removing pagination
+            serverSide: true, // Enable server-side processing
+            pageLength: 25,
             language: { // Add Albanian language settings
                 "processing": "Duke procesuar...",
                 "lengthMenu": "Shfaq _MENU_ regjistrime për faqe",
@@ -2841,68 +2898,32 @@ $countryChartData = json_encode($countryData);
                     >
                 >
                 <'row mt-3'
-                    <'col-12 col-md-6'> // Removed 'i'
+                    <'col-12 col-md-6'i>
                     <'col-12 col-md-6'
-                        <'d-flex justify-content-md-end'> // Removed 'p'
+                        <'d-flex justify-content-md-end'p>
                     >
                 >
             >`,
             buttons: [
                 'csv', 'excel', 'pdf', 'print'
             ],
-            data: <?php echo json_encode(array_map(function ($item) {
-                        // Map English month names to Albanian for display in the table
-                        $monthMap = [
-                            'January' => 'Janar',
-                            'February' => 'Shkurt',
-                            'March' => 'Mars',
-                            'April' => 'Prill',
-                            'May' => 'Maj',
-                            'June' => 'Qershor',
-                            'July' => 'Korrik',
-                            'August' => 'Gusht',
-                            'September' => 'Shtator',
-                            'October' => 'Tetor',
-                            'November' => 'Nëntor',
-                            'December' => 'Dhjetor'
-                        ];
-                        $displayMonth = isset($monthMap[$item->month]) ? $monthMap[$item->month] : $item->month;
-
-                        return [
-                            $displayMonth, // Use Albanian month name
-                            $item->year,
-                            $item->store,
-                            $item->artist,
-                            $item->title,
-                            $item->country,
-                            $item->items,
-                            $item->total_due_to_pay_eur
-                        ];
-                    }, $initialCsvData)); ?>,
-            columns: [{
-                    title: 'Muaji'
-                },
-                {
-                    title: 'Viti'
-                },
-                {
-                    title: 'Dyqani'
-                },
-                {
-                    title: 'Artisti'
-                },
-                {
-                    title: 'Titulli'
-                },
-                {
-                    title: 'Shteti'
-                },
-                {
-                    title: 'Artikuj'
-                },
-                {
-                    title: 'Për t\'u Paguar (€)'
+            ajax: {
+                url: 'ajax-csv-data.php', // Create this file to handle AJAX requests
+                type: 'POST',
+                data: function(d) {
+                    d.user_id = <?= $user_id ?>; // Pass the user ID to the server
+                    return d;
                 }
+            },
+            columns: [
+                { title: 'Muaji' },
+                { title: 'Viti' },
+                { title: 'Dyqani' },
+                { title: 'Artisti' },
+                { title: 'Titulli' },
+                { title: 'Shteti' },
+                { title: 'Artikuj' },
+                { title: 'Për t\'u Paguar (€)' }
             ],
             columnDefs: [{
                     // Format month nicely
@@ -2918,87 +2939,35 @@ $countryChartData = json_encode($countryData);
                     // Format store with badges
                     targets: 2,
                     render: function(data, type, row) {
-                        const storeBadgeClasses = {
-                            'Spotify': 'spotify',
-                            'iTunes': 'itunes',
-                            'Apple Music': 'itunes',
-                            'YouTube': 'youtube',
-                            'YouTube Music': 'youtube',
-                            'Amazon': 'amazon',
-                            'Amazon Music': 'amazon',
-                            'TikTok': 'tiktok',
-                            'FitVids': 'fitvids',
-                            'Deezer': 'deezer',
-                            'Google Play': 'google',
-                            'Apple': 'itunes',
-                            'Pandora': 'pandora',
-                            'SoundCloud': 'soundcloud',
-                            'Tidal': 'tidal',
-                            'Facebook': 'facebook',
-                            'Instagram': 'instagram'
-                        };
-
-                        if (type === 'display') {
-                            const badgeClass = storeBadgeClasses[data] || '';
-                            if (badgeClass) {
-                                return `<span class="store-badge ${badgeClass}">${data}</span>`;
-                            }
-                            return `<span class="store-badge">${data}</span>`;
-                        }
+                        // Store badges are now handled server-side in ajax-csv-data.php
                         return data;
                     }
                 },
                 {
-                    // Truncate artist and title
+                    // Artist and title are already truncated server-side
                     targets: [3, 4],
                     render: function(data, type, row) {
-                        if (type === 'display') {
-                            if (data && data.length > 30) { // Add check for data existence
-                                return `<span title="${data}" class="cell-truncate">${data.substring(0, 30)}...</span>`;
-                            }
-                        }
                         return data;
                     }
                 },
                 {
-                    // Format country with flag
+                    // Country with flag is handled server-side
                     targets: 5,
                     render: function(data, type, row) {
-                        if (type === 'display') {
-                            const country = new CSVData({
-                                country: data
-                            });
-                            const countryCode = country.getCountryCode();
-                            // Use w40 for higher quality table flags, styled by .country-flag CSS
-                            return `<span>
-                                <img src="https://flagcdn.com/w40/${countryCode}.png"
-                                     srcset="https://flagcdn.com/w80/${countryCode}.png 2x"
-                                     class="country-flag"
-                                     alt="${data || 'N/A'}"
-                                     onerror="this.onerror=null; this.src='img/flags/globe.png'; this.srcset='';">
-                                ${data || 'N/A'}
-                            </span>`;
-                        }
                         return data;
                     }
                 },
                 {
-                    // Format numbers
+                    // Numbers are formatted server-side
                     targets: 6,
                     render: function(data, type, row) {
-                        if (type === 'display') {
-                            return data.toLocaleString('sq-AL'); // Use Albanian locale for number formatting
-                        }
                         return data;
                     }
                 },
                 {
-                    // Format money
+                    // Money is formatted server-side
                     targets: 7,
                     render: function(data, type, row) {
-                        if (type === 'display') {
-                            return `<span class="money-amount">${parseFloat(data).toFixed(2)}</span>`;
-                        }
                         return data;
                     }
                 }
@@ -3027,22 +2996,29 @@ $countryChartData = json_encode($countryData);
 
         // --- Calculate Sum on Table Draw (Filter) ---
         csvTable.on('draw.dt', function() {
-            let totalSum = 0;
             const sumResultDiv = $('#songSumResult');
             const searchTerm = csvTable.search(); // Get the current search term
 
-            // Iterate over the data for the currently displayed (filtered) rows
-            csvTable.rows({
-                search: 'applied'
-            }).data().each(function(rowData) {
-                // Access the ' (€)' column data (index 7)
-                const amount = parseFloat(rowData[7]) || 0;
-                totalSum += amount;
-            });
-
-            // Display the result based on whether there's a search term
+            // For server-side processing, we need to make an AJAX call to calculate the sum
             if (searchTerm) {
-                sumResultDiv.html(`Shuma totale për kërkimin "<strong>${searchTerm}</strong>": <span class="text-success">€${totalSum.toFixed(2)}</span>`);
+                $.ajax({
+                    url: 'ajax-sum-data.php',
+                    type: 'POST',
+                    data: {
+                        user_id: <?= $user_id ?>,
+                        search: searchTerm
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            sumResultDiv.html(`Shuma totale për kërkimin "<strong>${searchTerm}</strong>": <span class="text-success">€${response.sum.toFixed(2)}</span>`);
+                        } else {
+                            sumResultDiv.html(`<span class="text-danger">Gabim në llogaritje: ${response.error}</span>`);
+                        }
+                    },
+                    error: function() {
+                        sumResultDiv.html('<span class="text-danger">Gabim në llogaritje të shumës</span>');
+                    }
+                });
             } else {
                 // Optionally clear or show a default message when search is empty
                 sumResultDiv.html('<span class="text-muted">Shkruani në kutinë e kërkimit më lart për të filtruar dhe parë shumën.</span>');
